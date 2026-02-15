@@ -1,17 +1,25 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PatientDashboard.css';
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
-  const [userName] = useState(() => {
-  const stored = localStorage.getItem("medvaultProfile");
-  const parsed = stored ? JSON.parse(stored) : null;
-  return parsed?.username || '';
-});
+  const [theme, setTheme] = useState('light');
+  const [userName] = useState('Rahul Agrawal'); // Dummy name
+  const [showStats, setShowStats] = useState(true);
+  const [appointments, setAppointments] = useState([]);
 
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('patientAppointments') || '[]');
+    setAppointments(stored);
+  }, []);
 
+  useEffect(() => {
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -20,11 +28,9 @@ const PatientDashboard = () => {
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
- const handleLogout = () => {
-  localStorage.clear();
-  navigate('/login');
-};
-  
+  const handleLogout = () => {
+    navigate('/login');
+  };
 
   const handleProfileClick = () => {
     navigate('/patient-profile');
@@ -43,67 +49,73 @@ const PatientDashboard = () => {
     }
   };
 
+  const formatDateLabel = (dateValue) => {
+    const date = new Date(dateValue);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTimeLabel = (timeValue) => {
+    const [hours, minutes] = timeValue.split(':');
+    const date = new Date();
+    date.setHours(Number(hours), Number(minutes), 0, 0);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const upcomingAppointments = appointments
+    .filter((item) => item.status !== 'rejected')
+    .map((item) => ({
+      ...item,
+      dateTime: new Date(`${item.date}T${item.time}`)
+    }))
+    .sort((a, b) => a.dateTime - b.dateTime)
+    .slice(0, 3);
+
   const dashboardCards = [
     {
       id: 0,
-      title: 'Profile',
-      icon: '👤',
-      description: 'View and update your patient profile',
-      stats: 'Account',
+      title: 'Overview',
+      icon: '✨',
       color: '#3b82f6',
-      link: '/patient-profile'
+      link: '#summary'
     },
     {
       id: 1,
-      title: 'Medical Records',
-      icon: '📋',
-      description: 'View and manage your health records',
-      stats: '24 Records',
-      color: '#0066cc',
-      link: '#records'
-    },
-    {
-      id: 2,
       title: 'Appointments',
       icon: '📅',
-      description: 'Schedule and track appointments',
-      stats: '3 Upcoming',
-      color: '#00b8a9',
+      color: '#0066cc',
       link: '#appointments'
     },
     {
+      id: 2,
+      title: 'Health Analytics',
+      icon: '📈',
+      color: '#00b8a9',
+      link: '#analytics'
+    },
+    {
       id: 3,
-      title: 'Doctors',
-      icon: '⚕️',
-      description: 'Connect with healthcare professionals',
-      stats: '8 Specialists',
+      title: 'Reports',
+      icon: '📄',
       color: '#9b59b6',
-      link: '#doctors'
+      link: '#reports'
     },
     {
       id: 4,
-      title: 'Hospitals',
-      icon: '🏥',
-      description: 'Find nearby medical facilities',
-      stats: '12 Nearby',
-      color: '#e74c3c',
-      link: '#hospitals'
+      title: 'Tips',
+      icon: '💡',
+      color: '#f39c12',
+      link: '#tips'
     },
     {
       id: 5,
-      title: 'Reminders',
-      icon: '🔔',
-      description: 'Medication and appointment alerts',
-      stats: '5 Active',
-      color: '#f39c12',
-      link: '#reminders'
-    },
-    {
-      id: 6,
       title: 'Settings',
       icon: '⚙️',
-      description: 'Customize your preferences',
-      stats: 'Profile',
       color: '#34495e',
       link: '#settings'
     }
@@ -201,78 +213,308 @@ const PatientDashboard = () => {
           <div className="dashboard-content">
             <div className="dashboard-welcome">
               <h1 className="welcome-title">Welcome back, {userName} 👋</h1>
-              <p className="welcome-subtitle">Here's your health dashboard overview</p>
+              <p className="welcome-subtitle">Your care, appointments, and health insights in one place</p>
             </div>
 
-            {/* Dashboard Cards Grid */}
-            <div className="cards-grid">
-              {dashboardCards.map((card, index) => (
-                <div
-                  key={card.id}
-                  className="dashboard-card"
-                  style={{
-                    animationDelay: `${index * 0.1}s`
-                  }}
-                >
-                  <div className="card-header">
-                    <div
-                      className="card-icon"
-                      style={{
-                        background: `linear-gradient(135deg, ${card.color}, ${card.color}dd)`
-                      }}
-                    >
-                      {card.icon}
-                    </div>
-                    <div className="card-badge">{card.stats}</div>
-                  </div>
-
-                  <div className="card-body">
-                    <h3 className="card-title">{card.title}</h3>
-                    <p className="card-description">{card.description}</p>
-                  </div>
-
-                  <div className="card-footer">
-                    <button className="card-action" onClick={() => handleCardAction(card.link)}>
-                      <span>Open</span>
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Glow effect */}
-                  <div className="card-glow" style={{ background: card.color }}></div>
+            <section id="summary" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Quick overview</h2>
+                  <p className="section-subtitle">At-a-glance essentials for today</p>
                 </div>
-              ))}
-            </div>
+                <button className="link-pill" onClick={() => handleCardAction('/patient-profile')}>
+                  View Profile
+                </button>
+              </div>
+
+              <div className="summary-grid">
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">🧑‍⚕️</div>
+                  <div>
+                    <p className="summary-label">Assigned Doctor</p>
+                    <h3 className="summary-value">Dr. Rhea Kapoor</h3>
+                    <span className="summary-meta">Cardiology</span>
+                  </div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">📅</div>
+                  <div>
+                    <p className="summary-label">Upcoming Appointment</p>
+                    <h3 className="summary-value">Tomorrow, 10:30 AM</h3>
+                    <span className="summary-meta">Confirmed</span>
+                  </div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">📄</div>
+                  <div>
+                    <p className="summary-label">Latest Report</p>
+                    <h3 className="summary-value">Blood Work</h3>
+                    <span className="summary-meta">Uploaded 2 days ago</span>
+                  </div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">❤️</div>
+                  <div>
+                    <p className="summary-label">Health Status</p>
+                    <h3 className="summary-value">Stable</h3>
+                    <span className="summary-meta status-good">On track</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="appointments" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Upcoming appointments</h2>
+                  <p className="section-subtitle">Priority visits and actions</p>
+                </div>
+                <div className="section-actions">
+                  <button className="link-pill" onClick={() => handleCardAction('/patient-bookings?tab=all')}>
+                    See All
+                  </button>
+                  <button className="primary-btn" onClick={() => handleCardAction('/patient-bookings?tab=book')}>
+                    Book Appointment
+                  </button>
+                </div>
+              </div>
+
+              <div className="appointment-list">
+                {upcomingAppointments.length === 0 ? (
+                  <article className="appointment-card">
+                    <div className="appointment-details">
+                      <h3>No upcoming appointments</h3>
+                      <p>Book a visit to get started.</p>
+                    </div>
+                    <div className="appointment-actions">
+                      <button className="primary-btn" onClick={() => handleCardAction('/patient-bookings?tab=book')}>
+                        Book Appointment
+                      </button>
+                    </div>
+                  </article>
+                ) : (
+                  upcomingAppointments.map((appointment) => (
+                    <article key={appointment.id} className="appointment-card">
+                      <div className="appointment-main">
+                        <div className="appointment-time">
+                          <span className="appointment-date">{formatDateLabel(appointment.date)}</span>
+                          <span className="appointment-hour">{formatTimeLabel(appointment.time)}</span>
+                          <span className="appointment-flag">Upcoming</span>
+                        </div>
+                        <div className="appointment-details">
+                          <h3>{appointment.doctor}</h3>
+                          <p>{appointment.department} • {appointment.hospital}</p>
+                        </div>
+                      </div>
+                      <div className="appointment-actions">
+                        <span className={`status-badge ${appointment.status === 'pending' ? 'pending' : 'confirmed'}`}>
+                          {appointment.status}
+                        </span>
+                        <div className="action-buttons">
+                          <button className="ghost-btn">Reschedule</button>
+                          <button className="danger-btn">Cancel</button>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section id="analytics" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Health analytics</h2>
+                  <p className="section-subtitle">Trends from recent vitals</p>
+                </div>
+                <button className="link-pill" onClick={() => handleCardAction('#analytics')}>
+                  View Full Insights
+                </button>
+              </div>
+
+              <div className="analytics-grid">
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Blood Pressure</span>
+                    <span className="trend-indicator good">🟢 Stable</span>
+                  </div>
+                  <h3>118/76</h3>
+                  <p className="analytics-meta">Last 7 days</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,28 20,20 40,22 60,16 80,18 100,12 120,14" />
+                  </svg>
+                </div>
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Sugar Level</span>
+                    <span className="trend-indicator warn">🟡 Watch</span>
+                  </div>
+                  <h3>132 mg/dL</h3>
+                  <p className="analytics-meta">Fasting average</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,20 20,22 40,18 60,26 80,24 100,22 120,28" />
+                  </svg>
+                </div>
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Weight Progress</span>
+                    <span className="trend-indicator good">🟢 Improving</span>
+                  </div>
+                  <h3>71.2 kg</h3>
+                  <p className="analytics-meta">-1.4 kg this month</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,12 20,16 40,18 60,20 80,24 100,26 120,30" />
+                  </svg>
+                </div>
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Heart Rate</span>
+                    <span className="trend-indicator alert">🔴 Elevated</span>
+                  </div>
+                  <h3>98 bpm</h3>
+                  <p className="analytics-meta">Resting average</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,30 20,26 40,18 60,22 80,14 100,20 120,16" />
+                  </svg>
+                </div>
+              </div>
+            </section>
+
+            <section id="reports" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Reports</h2>
+                  <p className="section-subtitle">Latest uploads and quick access</p>
+                </div>
+                <button className="link-pill">Upload Report</button>
+              </div>
+
+              <div className="reports-list">
+                <div className="report-item">
+                  <div>
+                    <h3>Complete Blood Count</h3>
+                    <p>Lab • Uploaded Feb 10</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="report-status">Ready</span>
+                    <button className="ghost-btn">View PDF</button>
+                    <button className="primary-btn">Download</button>
+                  </div>
+                </div>
+                <div className="report-item">
+                  <div>
+                    <h3>Chest X-Ray</h3>
+                    <p>X-ray • Uploaded Feb 5</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="report-status">Ready</span>
+                    <button className="ghost-btn">View PDF</button>
+                    <button className="primary-btn">Download</button>
+                  </div>
+                </div>
+                <div className="report-item">
+                  <div>
+                    <h3>Prescription Update</h3>
+                    <p>Prescription • Uploaded Jan 30</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="report-status muted">Processing</span>
+                    <button className="ghost-btn">View PDF</button>
+                    <button className="primary-btn">Download</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="tips" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Personalized precautions & tips</h2>
+                  <p className="section-subtitle">Daily reminders curated for you</p>
+                </div>
+                <button className="link-pill">Update Preferences</button>
+              </div>
+
+              <div className="tips-grid">
+                <div className="tip-card">
+                  <span className="tip-icon">🥗</span>
+                  <div>
+                    <h3>Avoid high salt intake</h3>
+                    <p>Stay under 5g of sodium today.</p>
+                  </div>
+                </div>
+                <div className="tip-card">
+                  <span className="tip-icon">💧</span>
+                  <div>
+                    <h3>Drink 2L of water</h3>
+                    <p>Hydration helps stabilize vitals.</p>
+                  </div>
+                </div>
+                <div className="tip-card">
+                  <span className="tip-icon">💊</span>
+                  <div>
+                    <h3>Take medicine at 8 PM</h3>
+                    <p>Next dose scheduled for tonight.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="settings" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Settings</h2>
+                  <p className="section-subtitle">Manage notifications, privacy, and data sharing</p>
+                </div>
+                <button className="link-pill">Open Settings</button>
+              </div>
+
+              <div className="settings-card">
+                <div>
+                  <h3>Notifications</h3>
+                  <p>Control alerts for appointments, reports, and reminders.</p>
+                </div>
+                <button className="primary-btn">Manage</button>
+              </div>
+            </section>
           </div>
         </div>
       </main>
 
       {/* Health Stats Bar */}
-      <aside className="health-stats">
-        <div className="stat-item">
-          <div className="stat-icon vital-good">💚</div>
-          <div className="stat-info">
-            <span className="stat-label">Overall Health</span>
-            <span className="stat-value">Good</span>
+      {showStats && (
+        <aside className="health-stats">
+          <button
+            type="button"
+            className="stats-close"
+            aria-label="Minimize quick summary"
+            onClick={() => setShowStats(false)}
+          >
+            ✕
+          </button>
+          <div className="stat-item">
+            <div className="stat-icon vital-good">💚</div>
+            <div className="stat-info">
+              <span className="stat-label">Overall Health</span>
+              <span className="stat-value">Good</span>
+            </div>
           </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">🩺</div>
-          <div className="stat-info">
-            <span className="stat-label">Last Checkup</span>
-            <span className="stat-value">2 weeks ago</span>
+          <div className="stat-item">
+            <div className="stat-icon">🩺</div>
+            <div className="stat-info">
+              <span className="stat-label">Last Checkup</span>
+              <span className="stat-value">2 weeks ago</span>
+            </div>
           </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">💊</div>
-          <div className="stat-info">
-            <span className="stat-label">Medications</span>
-            <span className="stat-value">3 Active</span>
+          <div className="stat-item">
+            <div className="stat-icon">💊</div>
+            <div className="stat-info">
+              <span className="stat-label">Medications</span>
+              <span className="stat-value">3 Active</span>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
     </div>
   );
 };

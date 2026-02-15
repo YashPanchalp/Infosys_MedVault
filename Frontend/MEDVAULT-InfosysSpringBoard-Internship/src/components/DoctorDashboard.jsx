@@ -2,47 +2,118 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DoctorDashboard.css';
 
+const APPOINTMENTS_KEY = 'patientAppointments';
+
+const formatTimeLabel = (timeValue) => {
+  const [hours, minutes] = timeValue.split(':');
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes), 0, 0);
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
+const getInitials = (name) => {
+  if (!name) {
+    return 'P';
+  }
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
 const DoctorDashboard = () => {
   const navigate = useNavigate();
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
-const [userName] = useState(() => {
-  const stored = localStorage.getItem("medvaultProfile");
-  const parsed = stored ? JSON.parse(stored) : null;
-  return parsed?.username || '';
-});
-
-
-
+  const [theme, setTheme] = useState('light');
+  const [userName] = useState('Dr. Asha Sharma');
+  const [showStats, setShowStats] = useState(true);
+  const [todayAppointments, setTodayAppointments] = useState([]);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    document.documentElement.dataset.theme = savedTheme;
+  }, []);
+
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem(APPOINTMENTS_KEY) || '[]');
+    const today = new Date().toISOString().slice(0, 10);
+    const todays = stored
+      .filter((item) => item.date === today && item.status === 'confirmed')
+      .map((item) => ({
+        ...item,
+        dateTime: new Date(`${item.date}T${item.time}`)
+      }))
+      .sort((a, b) => a.dateTime - b.dateTime);
+    if (todays.length > 0) {
+      setTodayAppointments(todays);
+      return;
+    }
+    const sample = [
+      {
+        id: 1,
+        patientName: 'Aarav Singh',
+        department: 'Cardiology',
+        hospital: 'CityCare Hospital',
+        time: '09:15'
+      },
+      {
+        id: 2,
+        patientName: 'Meera Patel',
+        department: 'Hypertension',
+        hospital: 'Green Valley Clinic',
+        time: '11:05'
+      },
+      {
+        id: 3,
+        patientName: 'Nisha Verma',
+        department: 'Wellness',
+        hospital: 'CityCare Hospital',
+        time: '13:40'
+      },
+      {
+        id: 4,
+        patientName: 'Kabir Das',
+        department: 'Follow-up',
+        hospital: 'Green Valley Clinic',
+        time: '15:20'
+      }
+    ].map((item) => ({
+      ...item,
+      date: today,
+      status: 'confirmed',
+      dateTime: new Date(`${today}T${item.time}`)
+    }));
+    setTodayAppointments(sample);
+  }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
+    document.documentElement.dataset.theme = newTheme;
   };
 
   const handleLogout = () => {
-  localStorage.clear();
-  navigate('/login');
-};
-
+    navigate('/login');
+  };
 
   const handleProfileClick = () => {
     navigate('/doctor-profile');
   };
 
   const handleNavClick = (event, link) => {
-    if (link && link.startsWith('/')) {
+    if (link?.startsWith('/')) {
       event.preventDefault();
       navigate(link);
     }
   };
 
   const handleCardAction = (link) => {
-    if (link && link.startsWith('/')) {
+    if (link?.startsWith('/')) {
       navigate(link);
     }
   };
@@ -50,19 +121,15 @@ const [userName] = useState(() => {
   const dashboardCards = [
     {
       id: 0,
-      title: 'Profile',
-      icon: '👤',
-      description: 'View and update your doctor profile',
-      stats: 'Account',
+      title: 'Overview',
+      icon: '✨',
       color: '#3b82f6',
-      link: '/doctor-profile'
+      link: '#summary'
     },
     {
       id: 1,
       title: 'Patients',
       icon: '👥',
-      description: 'Manage patients, reports, and prescriptions',
-      stats: '128 Active',
       color: '#0066cc',
       link: '#patients'
     },
@@ -70,26 +137,34 @@ const [userName] = useState(() => {
       id: 2,
       title: 'Appointments',
       icon: '📅',
-      description: 'Review upcoming visits and follow-ups',
-      stats: '6 Today',
       color: '#00b8a9',
-      link: '#appointments'
+      link: '/doctor-bookings'
     },
     {
       id: 3,
       title: 'Schedule',
       icon: '🗓️',
-      description: 'Manage clinic hours and availability',
-      stats: '2 Clinics',
       color: '#9b59b6',
       link: '#schedule'
     },
     {
       id: 4,
+      title: 'Analytics',
+      icon: '📈',
+      color: '#f39c12',
+      link: '#analytics'
+    },
+    {
+      id: 5,
+      title: 'Reports',
+      icon: '📄',
+      color: '#4f46e5',
+      link: '#reports'
+    },
+    {
+      id: 6,
       title: 'Settings',
       icon: '⚙️',
-      description: 'Profile, notifications, and preferences',
-      stats: 'Profile',
       color: '#34495e',
       link: '#settings'
     }
@@ -183,75 +258,351 @@ const [userName] = useState(() => {
           <div className="dashboard-content">
             <div className="dashboard-welcome">
               <h1 className="welcome-title">Welcome back, {userName} 👋</h1>
-              <p className="welcome-subtitle">Here is your clinical overview for today</p>
+              <p className="welcome-subtitle">Your patients, appointments, and clinical insights</p>
             </div>
 
-            <div className="cards-grid">
-              {dashboardCards.map((card, index) => (
-                <div
-                  key={card.id}
-                  className="dashboard-card"
-                  style={{
-                    animationDelay: `${index * 0.1}s`
-                  }}
-                >
-                  <div className="card-header">
-                    <div
-                      className="card-icon"
-                      style={{
-                        background: `linear-gradient(135deg, ${card.color}, ${card.color}dd)`
-                      }}
-                    >
-                      {card.icon}
-                    </div>
-                    <div className="card-badge">{card.stats}</div>
-                  </div>
-
-                  <div className="card-body">
-                    <h3 className="card-title">{card.title}</h3>
-                    <p className="card-description">{card.description}</p>
-                  </div>
-
-                  <div className="card-footer">
-                    <button className="card-action" onClick={() => handleCardAction(card.link)}>
-                      <span>Open</span>
-                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="card-glow" style={{ background: card.color }}></div>
+            <section id="summary" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Quick overview</h2>
+                  <p className="section-subtitle">Your day at a glance</p>
                 </div>
-              ))}
-            </div>
+                <button className="link-pill" onClick={() => handleCardAction('/doctor-profile')}>
+                  View Profile
+                </button>
+              </div>
+
+              <div className="summary-grid">
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">👥</div>
+                  <div>
+                    <p className="summary-label">Patients Today</p>
+                    <h3 className="summary-value">18 Scheduled</h3>
+                    <span className="summary-meta">6 walk-ins expected</span>
+                  </div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">📅</div>
+                  <div>
+                    <p className="summary-label">Next Appointment</p>
+                    <h3 className="summary-value">10:30 AM</h3>
+                    <span className="summary-meta">Dr. Clinic Room 2</span>
+                  </div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">📄</div>
+                  <div>
+                    <p className="summary-label">Pending Reports</p>
+                    <h3 className="summary-value">7 Reports</h3>
+                    <span className="summary-meta">3 urgent</span>
+                  </div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-icon" aria-hidden="true">❤️</div>
+                  <div>
+                    <p className="summary-label">On-call Status</p>
+                    <h3 className="summary-value">Available</h3>
+                    <span className="summary-meta status-good">Ready for consults</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="appointments" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Upcoming appointments</h2>
+                  <p className="section-subtitle">Today&apos;s confirmed visits</p>
+                </div>
+                <div className="section-actions">
+                  <button className="primary-btn" onClick={() => handleCardAction('/doctor-bookings')}>
+                    Manage Appointments
+                  </button>
+                </div>
+              </div>
+
+              <div className="appointment-list today-appointments">
+                {todayAppointments.length === 0 ? (
+                  <article className="appointment-card">
+                    <div className="appointment-details">
+                      <h3>No confirmed appointments today</h3>
+                      <p>Review pending requests to fill your schedule.</p>
+                    </div>
+                    <div className="appointment-actions">
+                      <button className="primary-btn" onClick={() => handleCardAction('/doctor-bookings')}>
+                        Manage Appointments
+                      </button>
+                    </div>
+                  </article>
+                ) : (
+                  todayAppointments.map((appointment) => (
+                    <article key={appointment.id} className="appointment-card today-card">
+                      <div className="appointment-main">
+                        <div className="appointment-details">
+                          <div className="appointment-header-row">
+                            <div className="appointment-patient">
+                              <div className="patient-avatar" aria-hidden="true">
+                                {getInitials(appointment.patientName)}
+                              </div>
+                              <h3>{appointment.patientName || 'Patient'}</h3>
+                            </div>
+                            <span className="time-pill">{formatTimeLabel(appointment.time)}</span>
+                          </div>
+                          <p>{appointment.department} • {appointment.hospital}</p>
+                        </div>
+                      </div>
+                      <div className="appointment-actions">
+                        <span className="status-badge confirmed">Confirmed</span>
+                        <div className="action-buttons">
+                          <button className="ghost-btn">Reschedule</button>
+                          <button className="danger-btn">Cancel</button>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section id="patients" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Patients requiring focus</h2>
+                  <p className="section-subtitle">Priority follow-ups and care plans</p>
+                </div>
+                <button className="link-pill">View All Patients</button>
+              </div>
+
+              <div className="patients-list">
+                <div className="patient-card">
+                  <div>
+                    <h3>Sameer Joshi</h3>
+                    <p>Hypertension • Follow-up due today</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="status-badge pending">Due Today</span>
+                    <button className="ghost-btn">Message</button>
+                    <button className="primary-btn">Open Profile</button>
+                  </div>
+                </div>
+                <div className="patient-card">
+                  <div>
+                    <h3>Meera Patel</h3>
+                    <p>Diabetes • Lab results review</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="status-badge confirmed">Reviewed</span>
+                    <button className="ghost-btn">Message</button>
+                    <button className="primary-btn">Open Profile</button>
+                  </div>
+                </div>
+                <div className="patient-card">
+                  <div>
+                    <h3>Nisha Verma</h3>
+                    <p>General • Post-op check-in</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="status-badge pending">Pending</span>
+                    <button className="ghost-btn">Message</button>
+                    <button className="primary-btn">Open Profile</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="schedule" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Schedule blocks</h2>
+                  <p className="section-subtitle">Manage clinic availability and telehealth slots</p>
+                </div>
+                <button className="link-pill">Edit Schedule</button>
+              </div>
+
+              <div className="schedule-grid">
+                <div className="schedule-card">
+                  <div>
+                    <h3>Morning Clinic</h3>
+                    <p>9:00 AM - 1:00 PM</p>
+                  </div>
+                  <span className="status-badge confirmed">Open</span>
+                </div>
+                <div className="schedule-card">
+                  <div>
+                    <h3>Teleconsult</h3>
+                    <p>2:00 PM - 4:00 PM</p>
+                  </div>
+                  <span className="status-badge pending">Limited</span>
+                </div>
+                <div className="schedule-card">
+                  <div>
+                    <h3>Evening Rounds</h3>
+                    <p>5:30 PM - 7:00 PM</p>
+                  </div>
+                  <span className="status-badge confirmed">Open</span>
+                </div>
+              </div>
+            </section>
+
+            <section id="analytics" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Health analytics</h2>
+                  <p className="section-subtitle">Clinic performance indicators</p>
+                </div>
+                <button className="link-pill" onClick={() => handleCardAction('#analytics')}>
+                  View Full Insights
+                </button>
+              </div>
+
+              <div className="analytics-grid">
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Patient Volume</span>
+                    <span className="trend-indicator good">🟢 Rising</span>
+                  </div>
+                  <h3>128 Visits</h3>
+                  <p className="analytics-meta">Last 7 days</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,28 20,24 40,22 60,18 80,16 100,14 120,10" />
+                  </svg>
+                </div>
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Average Wait Time</span>
+                    <span className="trend-indicator warn">🟡 Needs focus</span>
+                  </div>
+                  <h3>18 mins</h3>
+                  <p className="analytics-meta">Target under 15 mins</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,12 20,16 40,18 60,22 80,20 100,24 120,26" />
+                  </svg>
+                </div>
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Follow-up Rate</span>
+                    <span className="trend-indicator good">🟢 Improving</span>
+                  </div>
+                  <h3>74%</h3>
+                  <p className="analytics-meta">Monthly average</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,30 20,26 40,22 60,20 80,18 100,14 120,12" />
+                  </svg>
+                </div>
+                <div className="analytics-card">
+                  <div className="analytics-header">
+                    <span>Patient Satisfaction</span>
+                    <span className="trend-indicator alert">🔴 Review</span>
+                  </div>
+                  <h3>4.2 / 5</h3>
+                  <p className="analytics-meta">Last 30 days</p>
+                  <svg className="sparkline" viewBox="0 0 120 40" aria-hidden="true">
+                    <polyline points="0,20 20,18 40,16 60,18 80,22 100,24 120,26" />
+                  </svg>
+                </div>
+              </div>
+            </section>
+
+            <section id="reports" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Reports</h2>
+                  <p className="section-subtitle">Pending reviews and uploads</p>
+                </div>
+                <button className="link-pill">Create Report</button>
+              </div>
+
+              <div className="reports-list">
+                <div className="report-item">
+                  <div>
+                    <h3>Lab Panel Review</h3>
+                    <p>Sameer Joshi • Uploaded Feb 10</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="report-status">Urgent</span>
+                    <button className="ghost-btn">View PDF</button>
+                    <button className="primary-btn">Approve</button>
+                  </div>
+                </div>
+                <div className="report-item">
+                  <div>
+                    <h3>Radiology Summary</h3>
+                    <p>Meera Patel • Uploaded Feb 7</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="report-status">Ready</span>
+                    <button className="ghost-btn">View PDF</button>
+                    <button className="primary-btn">Approve</button>
+                  </div>
+                </div>
+                <div className="report-item">
+                  <div>
+                    <h3>Prescription Update</h3>
+                    <p>Nisha Verma • Uploaded Feb 2</p>
+                  </div>
+                  <div className="report-actions">
+                    <span className="report-status muted">Draft</span>
+                    <button className="ghost-btn">View PDF</button>
+                    <button className="primary-btn">Finalize</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="settings" className="dashboard-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">Settings</h2>
+                  <p className="section-subtitle">Notifications, availability, and privacy</p>
+                </div>
+                <button className="link-pill">Open Settings</button>
+              </div>
+
+              <div className="settings-card">
+                <div>
+                  <h3>Availability</h3>
+                  <p>Update clinic hours and teleconsulting slots.</p>
+                </div>
+                <button className="primary-btn">Manage</button>
+              </div>
+            </section>
           </div>
         </div>
       </main>
 
-      <aside className="health-stats">
-        <div className="stat-item">
-          <div className="stat-icon vital-good">✅</div>
-          <div className="stat-info">
-            <span className="stat-label">Today&apos;s Patients</span>
-            <span className="stat-value">18</span>
+      {showStats && (
+        <aside className="health-stats">
+          <button
+            type="button"
+            className="stats-close"
+            aria-label="Minimize quick summary"
+            onClick={() => setShowStats(false)}
+          >
+            ✕
+          </button>
+          <div className="stat-item">
+            <div className="stat-icon vital-good">✅</div>
+            <div className="stat-info">
+              <span className="stat-label">Today&apos;s Patients</span>
+              <span className="stat-value">18</span>
+            </div>
           </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">🧾</div>
-          <div className="stat-info">
-            <span className="stat-label">Pending Reports</span>
-            <span className="stat-value">7</span>
+          <div className="stat-item">
+            <div className="stat-icon">🧾</div>
+            <div className="stat-info">
+              <span className="stat-label">Pending Reports</span>
+              <span className="stat-value">7</span>
+            </div>
           </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">⏰</div>
-          <div className="stat-info">
-            <span className="stat-label">Next Appointment</span>
-            <span className="stat-value">10:30 AM</span>
+          <div className="stat-item">
+            <div className="stat-icon">⏰</div>
+            <div className="stat-info">
+              <span className="stat-label">Next Appointment</span>
+              <span className="stat-value">10:30 AM</span>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
     </div>
   );
 };

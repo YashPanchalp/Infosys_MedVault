@@ -101,28 +101,18 @@ const Otp = () => {
     }
 
   } else if (type === "login") {
+    response = await axios.post("/api/auth/login/verify-otp", {
+      email: userData.email,
+      otp: otpValue
+    });
 
-  response = await axios.post("/api/auth/login/verify-otp", {
-    email: userData.email,
-    otp: otpValue
-  });
-
-  const { token, name, role, email } = response.data;
-
-  // Save everything
-  localStorage.setItem("token", token);
-  localStorage.setItem("name", name);
-  localStorage.setItem("role", role.toLowerCase());
-  localStorage.setItem("email", email);
-
-  // Redirect based on role
-  if (role === "DOCTOR") {
-    navigate("/doctor-dashboard");
-  } else {
-    navigate("/patient-dashboard");
-  }
-}
-else if (type === "reset") {
+    if (response.data.startsWith("ey")) {
+      localStorage.setItem("token", response.data);
+      navigate("/dashboard");
+    } else {
+      alert(response.data);
+    }
+  } else if (type === "reset") {
     response = await axios.post("/api/auth/forgot-password/verify-otp", {
       email: userData.email,
       otp: otpValue
@@ -152,44 +142,11 @@ else if (type === "reset") {
  }
 
 
-  const handleResend = async () => {
-  try {
-    setIsVerifying(true);
-
-    
-
-    if (type === "register") {
-       await axios.post("/api/auth/register/request-otp", {
-        name: userData.username,
-        email: userData.email,
-        password: userData.password,
-        role: userData.role.toUpperCase(),
-      });
-    } 
-    else if (type === "login") {
-      await axios.post("/api/auth/login/request-otp", {
-        email: userData.email,
-      });
-    } 
-    else if (type === "reset") {
-      await axios.post("/api/auth/forgot-password/request-otp", {
-        email: userData.email,
-      });
-    }
-
-    alert("OTP resent successfully!");
-
-    // Clear fields
+  const handleResend = () => {
     setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
-
-  } catch (error) {
-    console.error("Resend OTP failed:", error.response?.data || error.message);
-    alert(error.response?.data || "Failed to resend OTP");
-  } finally {
-    setIsVerifying(false);
-  }
-};
+    // In real app, trigger OTP resend here
+  };
 
   return (
     <div className="otp-container">
