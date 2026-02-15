@@ -5,18 +5,17 @@ import axios from "axios";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [theme, setTheme] = useState(() => {
-  return localStorage.getItem('theme') || 'light';
-});
+  const [theme, setTheme] = useState('light');
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
 
   useEffect(() => {
-  document.documentElement.dataset.theme = theme;
-}, [theme]);
-
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+    document.documentElement.dataset.theme = savedTheme;
+  }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
