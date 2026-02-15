@@ -1,0 +1,119 @@
+/* ==============================================
+   THEME.CSS - Global Theme Variables
+   Medical-friendly color palette with dark/light modes
+   ============================================== */
+
+:root {
+  /* Light Theme - Calm, Clinical, Trustworthy */
+  --bg-primary: #f8fbfd;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f7fb;
+  
+  /* Medical Blue Palette - Professional & Calming */
+  --primary: #0066cc;
+  --primary-dark: #004d99;
+  --primary-light: #3385d6;
+  --accent: #00b8a9;
+  --accent-light: #33c7bb;
+  
+  /* Text Colors */
+  --text-primary: #1a2332;
+  --text-secondary: #5a6b7f;
+  --text-muted: #8899a6;
+  --text-inverse: #ffffff;
+  
+  /* Semantic Colors */
+  --success: #00c853;
+  --warning: #ff9800;
+  --error: #e53935;
+  --info: #2196f3;
+  
+  /* Shadows & Borders */
+  --shadow-sm: 0 2px 8px rgba(0, 102, 204, 0.08);
+  --shadow-md: 0 4px 20px rgba(0, 102, 204, 0.12);
+  --shadow-lg: 0 12px 40px rgba(0, 102, 204, 0.18);
+  --shadow-3d: 
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 8px 16px rgba(0, 102, 204, 0.1),
+    0 16px 32px rgba(0, 102, 204, 0.08);
+  
+  --border: #e1e8ed;
+  --border-light: #f0f4f7;
+  
+  /* Medical UI Specific */
+  --vital-good: #00c853;
+  --vital-warning: #ff9800;
+  --vital-critical: #e53935;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Dark Theme - Comfortable for Extended Use */
+[data-theme="dark"] {
+  --bg-primary: #0f1419;
+  --bg-secondary: #16191f;
+  --bg-card: #1c2128;
+  --bg-hover: #242931;
+  
+  /* Adjusted Blues for Dark Mode */
+  --primary: #4d9fff;
+  --primary-dark: #3385d6;
+  --primary-light: #66acff;
+  --accent: #00e6d1;
+  --accent-light: #33eedb;
+  
+  /* Dark Mode Text */
+  --text-primary: #e8eef5;
+  --text-secondary: #b8c5d6;
+  --text-muted: #7d8ca1;
+  --text-inverse: #0f1419;
+  
+  /* Adjusted Semantic Colors */
+  --success: #26de81;
+  --warning: #ffb347;
+  --error: #ff6b6b;
+  --info: #5dade2;
+  
+  /* Dark Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --shadow-3d: 
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 16px rgba(77, 159, 255, 0.15),
+    0 16px 32px rgba(77, 159, 255, 0.1);
+  
+  --border: #2d3440;
+  --border-light: #242931;
+}
+
+/* Medical-Grade Typography */
+:root {
+  /* Using Nunito for warmth & readability in healthcare */
+  --font-display: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  
+  /* Type Scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+  
+  /* Font Weights */
+  --weight-normal: 400;
+  --weight-medium: 600;
+  --weight-bold: 700;
+  --weight-extra: 800;
+}
+
+/* Import Nunito Font */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
