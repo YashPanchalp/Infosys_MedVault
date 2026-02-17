@@ -53,8 +53,6 @@ public class DoctorProfileService {
         profile.setExperienceYears(updatedData.getExperienceYears());
         profile.setQualification(updatedData.getQualification());
         profile.setLicenseNumber(updatedData.getLicenseNumber());
-        profile.setHospitalName(updatedData.getHospitalName());
-        profile.setHospitalAddress(updatedData.getHospitalAddress());
         profile.setConsultationMode(updatedData.getConsultationMode());
 
         return doctorProfileRepository.save(profile);

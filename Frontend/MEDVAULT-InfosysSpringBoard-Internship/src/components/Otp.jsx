@@ -11,6 +11,7 @@ const Otp = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const location = useLocation();
   const { type, userData } = location.state || {};
+  const [resendTimer, setResendTimer] = useState(0);
 
   useEffect(() => {
   if (!type || !userData) {
@@ -18,6 +19,14 @@ const Otp = () => {
   }
 }, [type, userData, navigate]);
 
+useEffect(() => {
+  if (resendTimer > 0) {
+    const timer = setTimeout(() => {
+      setResendTimer(resendTimer - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }
+}, [resendTimer]);
 
 
   useEffect(() => {
@@ -106,12 +115,13 @@ const Otp = () => {
       otp: otpValue
     });
 
-    if (response.data.startsWith("ey")) {
-      localStorage.setItem("token", response.data);
-      navigate("/dashboard");
-    } else {
-      alert(response.data);
-    }
+    if (response.data?.token) {
+  localStorage.setItem("token", response.data.token);
+  localStorage.setItem("role", response.data.role);
+  navigate("/dashboard");
+} else {
+  alert("Login failed");
+}
   } else if (type === "reset") {
     response = await axios.post("/api/auth/forgot-password/verify-otp", {
       email: userData.email,
@@ -137,16 +147,48 @@ const Otp = () => {
   // 🔥 Clear OTP fields
   setOtp(['', '', '', '', '', '']);
   inputRefs.current[0]?.focus();
-}
+}finally {
+    setIsVerifying(false); // 🔥 THIS FIXES YOUR ISSUE
+  }
 
  }
 
 
-  const handleResend = () => {
+  const handleResend = async () => {
+  try {
+
+    setIsVerifying(true);
+
+    if (type === "register") {
+      await axios.post("/api/auth/register/request-otp", {
+        email: userData.email
+      });
+    } 
+    else if (type === "login") {
+      await axios.post("/api/auth/login/resend-otp", {
+        email: userData.email
+      });
+    } 
+    else if (type === "reset") {
+      await axios.post("/api/auth/forgot-password/request-otp", {
+        email: userData.email
+      });
+    }
+
+    alert("OTP sent successfully!");
+    setResendTimer(30);
+
     setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
-    // In real app, trigger OTP resend here
-  };
+
+  } catch (error) {
+    console.error("Resend OTP failed:", error.response?.data || error.message);
+    alert(error.response?.data || "Failed to resend OTP");
+  } finally {
+    setIsVerifying(false);
+  }
+};
+
 
   return (
     <div className="otp-container">
@@ -210,9 +252,15 @@ const Otp = () => {
 
           <div className="otp-footer">
             <p>Didn't receive the code?</p>
-            <button type="button" onClick={handleResend} className="resend-btn">
-              Resend Code
-            </button>
+            <button
+  type="button"
+  onClick={handleResend}
+  disabled={resendTimer > 0}
+  className="resend-btn"
+>
+  {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend Code"}
+</button>
+
           </div>
         </form>
 

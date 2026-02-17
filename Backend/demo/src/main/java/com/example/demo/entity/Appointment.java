@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import jakarta.persistence.Entity;
@@ -9,9 +10,18 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
-    @Entity
+
+   @Entity
+@Table(
+    uniqueConstraints = @UniqueConstraint(
+        columnNames = {"doctor_id", "appointmentDate", "appointmentTime"}
+    )
+)
 public class Appointment {
 
     @Id
@@ -19,13 +29,22 @@ public class Appointment {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
     private User patient;
 
     @ManyToOne
+    @JoinColumn(name = "doctor_id", nullable = false)
     private User doctor;
 
     private LocalDate appointmentDate;
     private LocalTime appointmentTime;
+
+    private String reason;
+
+    @Enumerated(EnumType.STRING)
+    private AppointmentStatus status;
+
+    private LocalDateTime createdAt;
 
     public Long getId() {
         return id;
@@ -83,11 +102,13 @@ public class Appointment {
         this.status = status;
     }
 
-    private String reason;
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
-    @Enumerated(EnumType.STRING)
-    private AppointmentStatus status;
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
-    
+    // getters & setters
 }
-

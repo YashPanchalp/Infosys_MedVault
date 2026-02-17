@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 
 
@@ -53,17 +54,11 @@ public class DoctorProfile {
         public void setLicenseNumber(String licenseNumber) {
             this.licenseNumber = licenseNumber;
         }
-        public String getHospitalName() {
-            return hospitalName;
+        public Hospital getHospital() {
+            return hospital;
         }
-        public void setHospitalName(String hospitalName) {
-            this.hospitalName = hospitalName;
-        }
-        public String getHospitalAddress() {
-            return hospitalAddress;
-        }
-        public void setHospitalAddress(String hospitalAddress) {
-            this.hospitalAddress = hospitalAddress;
+        public void setHospital(Hospital hospital) {
+            this.hospital = hospital;
         }
         public String getConsultationMode() {
             return consultationMode;
@@ -84,8 +79,8 @@ public class DoctorProfile {
     private Integer experienceYears;
     private String qualification;
     private String licenseNumber;
-    private String hospitalName;
-    private String hospitalAddress;
+    @ManyToOne
+private Hospital hospital;
     private String consultationMode;
 }
 

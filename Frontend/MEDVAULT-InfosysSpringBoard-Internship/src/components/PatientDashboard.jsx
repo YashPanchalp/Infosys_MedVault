@@ -1,18 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PatientDashboard.css';
+import axios from 'axios';
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState('light');
-  const [userName] = useState('Rahul Agrawal'); // Dummy name
+  const [userName, setUserName] = useState('');
   const [showStats, setShowStats] = useState(true);
   const [appointments, setAppointments] = useState([]);
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('patientAppointments') || '[]');
-    setAppointments(stored);
+   useEffect(() => {
+    const fetchPatientProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get('/api/patient/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const patient = response.data;
+
+       setUserName(
+  patient?.user?.name ||
+  patient?.name ||
+  patient?.fullName ||
+  'Patient'
+);
+
+
+      } catch (error) {
+        console.error('Failed to fetch patient profile', error);
+        setUserName('Patient');
+      }
+    };
+
+    fetchPatientProfile();
   }, []);
+
+  useEffect(() => {
+  const loadAppointments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const resp = await axios.get('/api/appointments/patient', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = resp.data || [];
+
+      setAppointments(data);
+
+    } catch (error) {
+      console.error('Failed to load appointments', error);
+      setAppointments([]);
+    }
+  };
+
+  loadAppointments();
+}, []);
+
 
   useEffect(() => {
     // Check for saved theme preference
@@ -58,23 +109,37 @@ const PatientDashboard = () => {
   };
 
   const formatTimeLabel = (timeValue) => {
-    const [hours, minutes] = timeValue.split(':');
-    const date = new Date();
-    date.setHours(Number(hours), Number(minutes), 0, 0);
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
+  if (!timeValue) return '';
+  const [hours, minutes] = timeValue.split(':');
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes), 0, 0);
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
 
-  const upcomingAppointments = appointments
-    .filter((item) => item.status !== 'rejected')
-    .map((item) => ({
-      ...item,
-      dateTime: new Date(`${item.date}T${item.time}`)
-    }))
-    .sort((a, b) => a.dateTime - b.dateTime)
-    .slice(0, 3);
+
+ const upcomingAppointments = appointments
+  .filter((item) => item.status !== 'REJECTED')
+  .map((item) => ({
+    ...item,
+    dateTime: new Date(
+      `${item.appointmentDate}T${item.appointmentTime}`
+    )
+  }))
+  .sort((a, b) => a.dateTime - b.dateTime)
+  .slice(0, 3);
+
+  const nextAppointment = appointments
+  .filter(item => item.status !== 'REJECTED')
+  .map(item => ({
+    ...item,
+    dateTime: new Date(`${item.appointmentDate}T${item.appointmentTime}`)
+  }))
+  .filter(item => item.dateTime >= new Date())
+  .sort((a, b) => a.dateTime - b.dateTime)[0];
+
 
   const dashboardCards = [
     {
@@ -232,16 +297,36 @@ const PatientDashboard = () => {
                   <div className="summary-icon" aria-hidden="true">🧑‍⚕️</div>
                   <div>
                     <p className="summary-label">Assigned Doctor</p>
-                    <h3 className="summary-value">Dr. Rhea Kapoor</h3>
-                    <span className="summary-meta">Cardiology</span>
+                    <h3 className="summary-value">
+  {nextAppointment?.doctorName || 'Not Assigned'}
+</h3>
+<span className="summary-meta">
+  {nextAppointment ? nextAppointment.status : 'No upcoming appointment'}
+</span>
+
                   </div>
                 </div>
                 <div className="summary-card">
                   <div className="summary-icon" aria-hidden="true">📅</div>
                   <div>
                     <p className="summary-label">Upcoming Appointment</p>
-                    <h3 className="summary-value">Tomorrow, 10:30 AM</h3>
-                    <span className="summary-meta">Confirmed</span>
+                    {nextAppointment ? (
+  <>
+    <h3 className="summary-value">
+      {formatDateLabel(nextAppointment.appointmentDate)},{" "}
+      {formatTimeLabel(nextAppointment.appointmentTime)}
+    </h3>
+    <span className="summary-meta">
+      {nextAppointment.status}
+    </span>
+  </>
+) : (
+  <>
+    <h3 className="summary-value">No upcoming</h3>
+    <span className="summary-meta">Book an appointment</span>
+  </>
+)}
+
                   </div>
                 </div>
                 <div className="summary-card">
@@ -297,12 +382,12 @@ const PatientDashboard = () => {
                     <article key={appointment.id} className="appointment-card">
                       <div className="appointment-main">
                         <div className="appointment-time">
-                          <span className="appointment-date">{formatDateLabel(appointment.date)}</span>
-                          <span className="appointment-hour">{formatTimeLabel(appointment.time)}</span>
+                          <span className="appointment-date">{formatDateLabel(appointment.appointmentDate)}</span>
+                          <span className="appointment-hour">{formatTimeLabel(appointment.appointmentTime)}</span>
                           <span className="appointment-flag">Upcoming</span>
                         </div>
                         <div className="appointment-details">
-                          <h3>{appointment.doctor}</h3>
+                          <h3>{appointment.doctorName || 'Doctor'}</h3>
                           <p>{appointment.department} • {appointment.hospital}</p>
                         </div>
                       </div>

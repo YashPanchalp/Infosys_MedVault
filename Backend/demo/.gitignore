@@ -7,6 +7,8 @@ dist/
 # environment variables
 .env
 
+target/
+
 # logs
 npm-debug.log*
 yarn-debug.log*

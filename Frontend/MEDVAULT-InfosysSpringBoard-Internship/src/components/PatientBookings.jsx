@@ -1,29 +1,322 @@
-import React, { useEffect, useMemo, useState } from 'react';
+// import React, { useEffect, useMemo, useState } from 'react';
+// import axios from 'axios';
+// import { useLocation, useNavigate } from 'react-router-dom';
+// import './PatientBookings.css';
+
+// const baseSlots = ['09:00', '10:30', '12:00', '15:00', '16:30'];
+
+// const formatDateLabel = (dateValue) => {
+//   const date = new Date(dateValue);
+//   return date.toLocaleDateString('en-US', {
+//     month: 'short',
+//     day: 'numeric',
+//     weekday: 'short'
+//   });
+// };
+
+// const formatTimeLabel = (timeValue) => {
+//   const [hours, minutes] = timeValue.split(':');
+//   const date = new Date();
+//   date.setHours(Number(hours), Number(minutes), 0, 0);
+//   return date.toLocaleTimeString('en-US', {
+//     hour: 'numeric',
+//     minute: '2-digit'
+//   });
+// };
+
+// const getNextDates = (count = 7) => {
+//   const today = new Date();
+//   const dates = [];
+//   for (let i = 0; i < count; i++) {
+//     const next = new Date(today);
+//     next.setDate(today.getDate() + i);
+//     dates.push(next.toISOString().slice(0, 10));
+//   }
+//   return dates;
+// };
+
+// const buildSlotsForDoctor = (doctorId) => {
+//   const dates = getNextDates(10);
+//   const slotsByDate = {};
+//   dates.forEach((date, index) => {
+//     const offset = String(doctorId || '').length % 3;
+//     const start = (index + offset) % 2 === 0 ? 0 : 2;
+//     slotsByDate[date] = baseSlots.slice(start, start + 3);
+//   });
+//   return slotsByDate;
+// };
+
+// const PatientBookings = () => {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+
+//   const [activeTab, setActiveTab] = useState('all');
+//   const [appointments, setAppointments] = useState([]);
+//   const [doctors, setDoctors] = useState([]);
+//   const [doctorId, setDoctorId] = useState('');
+//   const [selectedDate, setSelectedDate] = useState('');
+//   const [selectedTime, setSelectedTime] = useState('');
+//   const [concern, setConcern] = useState('');
+//   const [successMessage, setSuccessMessage] = useState('');
+//   const [loading, setLoading] = useState(false);
+
+//   const token = localStorage.getItem('token');
+
+//   /* ===============================
+//      Fetch Doctors
+//   =============================== */
+//   useEffect(() => {
+//     if (!token) return;
+
+//     const loadDoctors = async () => {
+//       try {
+//         const resp = await axios.get('/api/doctors', {
+//           headers: { Authorization: `Bearer ${token}` }
+//         });
+//         setDoctors(resp.data || []);
+//         if (resp.data?.length > 0) {
+//           setDoctorId(String(resp.data[0].id));
+//         }
+//       } catch (err) {
+//         console.error('Failed to load doctors', err);
+//       }
+//     };
+
+//     loadDoctors();
+//   }, [token]);
+
+//   /* ===============================
+//      Fetch Patient Appointments
+//   =============================== */
+//   const fetchAppointments = async () => {
+//     if (!token) return;
+
+//     try {
+//       const resp = await axios.get('/api/appointments/patient', {
+//         headers: { Authorization: `Bearer ${token}` }
+//       });
+//       setAppointments(resp.data || []);
+//     } catch (err) {
+//       console.error('Failed to load appointments', err);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchAppointments();
+//   }, [token]);
+
+//   /* ===============================
+//      Sync Tab With URL
+//   =============================== */
+//   useEffect(() => {
+//     const params = new URLSearchParams(location.search);
+//     const tab = params.get('tab');
+//     if (tab === 'book' || tab === 'all') {
+//       setActiveTab(tab);
+//     }
+//   }, [location.search]);
+
+//   /* ===============================
+//      Reset Date/Time When Doctor Changes
+//   =============================== */
+//   useEffect(() => {
+//     setSelectedDate('');
+//     setSelectedTime('');
+//   }, [doctorId]);
+
+//   /* ===============================
+//      Slot Calculations
+//   =============================== */
+//   const availableDates = useMemo(() => {
+//     return Object.keys(buildSlotsForDoctor(doctorId));
+//   }, [doctorId]);
+
+//   const availableTimes = useMemo(() => {
+//     if (!selectedDate) return [];
+//     return buildSlotsForDoctor(doctorId)[selectedDate] || [];
+//   }, [doctorId, selectedDate]);
+
+//   /* ===============================
+//      Tab Switch
+//   =============================== */
+//   const handleTabChange = (tab) => {
+//     setActiveTab(tab);
+//     navigate(`/patient-bookings?tab=${tab}`);
+//   };
+
+//   /* ===============================
+//      Book Appointment
+//   =============================== */
+//   const handleBook = async () => {
+//     if (!doctorId || !selectedDate || !selectedTime || !concern.trim()) {
+//       setSuccessMessage('Please complete all fields.');
+//       return;
+//     }
+
+//     try {
+//       setLoading(true);
+
+//       await axios.post(
+//         '/api/appointments/book',
+//         {
+//           doctorId: Number(doctorId),
+//           date: selectedDate,
+//           time: selectedTime,
+//           reason: concern.trim()
+//         },
+//         {
+//           headers: { Authorization: `Bearer ${token}` }
+//         }
+//       );
+
+//       setSuccessMessage('Appointment booked successfully (Pending approval).');
+//       setSelectedDate('');
+//       setSelectedTime('');
+//       setConcern('');
+
+//       await fetchAppointments();
+//       setActiveTab('all');
+
+//     } catch (err) {
+//       console.error(err);
+//       setSuccessMessage(
+//         err.response?.data?.message || 'Slot may already be booked.'
+//       );
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   return (
+//     <div className="bookings-page">
+//       <header className="bookings-header">
+//         <div>
+//           <h1>Appointments</h1>
+//           <p>Manage your bookings and reserve new slots.</p>
+//         </div>
+//         <div className="bookings-header-actions">
+//           <button
+//             className="ghost-btn"
+//             onClick={() => navigate('/patient-dashboard')}
+//           >
+//             Back to Dashboard
+//           </button>
+//           <button
+//             className="primary-btn"
+//             onClick={() => handleTabChange('book')}
+//           >
+//             Book Appointment
+//           </button>
+//         </div>
+//       </header>
+
+//       <div className="booking-tabs">
+//         <button
+//           className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+//           onClick={() => handleTabChange('all')}
+//         >
+//           All Appointments
+//         </button>
+//         <button
+//           className={`tab-btn ${activeTab === 'book' ? 'active' : ''}`}
+//           onClick={() => handleTabChange('book')}
+//         >
+//           Book Appointment
+//         </button>
+//       </div>
+
+//       {activeTab === 'all' && (
+//         <section className="bookings-section">
+//           <h2>All Appointments</h2>
+
+//           {appointments.length === 0 ? (
+//             <p>No appointments yet.</p>
+//           ) : (
+//             <div className="appointments-list">
+//               {appointments.map((item) => (
+//                 <div key={item.id} className="appointment-row">
+//                   <h3>{item.doctorName}</h3>
+//                   <p>
+//                     {formatDateLabel(item.appointmentDate)} •{' '}
+//                     {formatTimeLabel(item.appointmentTime)}
+//                   </p>
+//                   <span className={`status-pill ${item.status}`}>
+//                     {item.status}
+//                   </span>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </section>
+//       )}
+
+//       {activeTab === 'book' && (
+//         <section className="bookings-section">
+//           <h2>Book a New Appointment</h2>
+
+//           <select
+//             value={doctorId}
+//             onChange={(e) => setDoctorId(e.target.value)}
+//           >
+//             {doctors.map((doctor) => (
+//               <option key={doctor.id} value={doctor.id}>
+//   {doctor.name}
+//   {doctor.specialization ? ` (${doctor.specialization})` : ''}
+// </option>
+
+//             ))}
+//           </select>
+
+//           <div className="calendar-grid">
+//             {availableDates.map((date) => (
+//               <button
+//                 key={date}
+//                 onClick={() => setSelectedDate(date)}
+//                 className={selectedDate === date ? 'active' : ''}
+//               >
+//                 {formatDateLabel(date)}
+//               </button>
+//             ))}
+//           </div>
+
+//           <div className="time-grid">
+//             {availableTimes.map((time) => (
+//               <button
+//                 key={time}
+//                 onClick={() => setSelectedTime(time)}
+//                 className={selectedTime === time ? 'active' : ''}
+//               >
+//                 {formatTimeLabel(time)}
+//               </button>
+//             ))}
+//           </div>
+
+//           <textarea
+//             value={concern}
+//             onChange={(e) => setConcern(e.target.value)}
+//             placeholder="Describe your concern"
+//           />
+
+//           {successMessage && <p className="feedback">{successMessage}</p>}
+
+//           <button
+//             className="primary-btn"
+//             onClick={handleBook}
+//             disabled={loading}
+//           >
+//             {loading ? 'Booking...' : 'Book Appointment'}
+//           </button>
+//         </section>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default PatientBookings;
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './PatientBookings.css';
-
-const APPOINTMENTS_KEY = 'patientAppointments';
-
-const hospitals = [
-  {
-    id: 'citycare',
-    name: 'CityCare Hospital',
-    doctors: [
-      { id: 'dr-kapoor', name: 'Dr. Rhea Kapoor', department: 'Cardiology' },
-      { id: 'dr-ali', name: 'Dr. Imran Ali', department: 'Endocrinology' }
-    ]
-  },
-  {
-    id: 'greenvalley',
-    name: 'Green Valley Clinic',
-    doctors: [
-      { id: 'dr-menon', name: 'Dr. Kavya Menon', department: 'Nutrition' },
-      { id: 'dr-verma', name: 'Dr. Nisha Verma', department: 'General Medicine' }
-    ]
-  }
-];
-
-const baseSlots = ['09:00', '10:30', '12:00', '15:00', '16:30'];
 
 const formatDateLabel = (dateValue) => {
   const date = new Date(dateValue);
@@ -47,7 +340,7 @@ const formatTimeLabel = (timeValue) => {
 const getNextDates = (count = 7) => {
   const today = new Date();
   const dates = [];
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < count; i++) {
     const next = new Date(today);
     next.setDate(today.getDate() + i);
     dates.push(next.toISOString().slice(0, 10));
@@ -55,41 +348,70 @@ const getNextDates = (count = 7) => {
   return dates;
 };
 
-const buildSlotsForDoctor = (doctorId) => {
-  const dates = getNextDates(10);
-  const slotsByDate = {};
-  dates.forEach((date, index) => {
-    const offset = doctorId.length % 3;
-    const start = (index + offset) % 2 === 0 ? 0 : 2;
-    slotsByDate[date] = baseSlots.slice(start, start + 3);
-  });
-  return slotsByDate;
-};
-
-const slotsCache = hospitals.reduce((acc, hospital) => {
-  hospital.doctors.forEach((doctor) => {
-    acc[doctor.id] = buildSlotsForDoctor(doctor.id);
-  });
-  return acc;
-}, {});
-
 const PatientBookings = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const token = localStorage.getItem('token');
+
   const [activeTab, setActiveTab] = useState('all');
   const [appointments, setAppointments] = useState([]);
-  const [hospitalId, setHospitalId] = useState(hospitals[0].id);
-  const [doctorId, setDoctorId] = useState(hospitals[0].doctors[0].id);
+  const [doctors, setDoctors] = useState([]);
+  const [doctorId, setDoctorId] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const [availableTimes, setAvailableTimes] = useState([]);
   const [selectedTime, setSelectedTime] = useState('');
   const [concern, setConcern] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const availableDates = getNextDates(10);
+
+  /* ===============================
+     Fetch Doctors
+  =============================== */
+  useEffect(() => {
+    if (!token) return;
+
+    const loadDoctors = async () => {
+      try {
+        const resp = await axios.get('/api/doctors', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setDoctors(resp.data || []);
+        if (resp.data?.length > 0) {
+          setDoctorId(String(resp.data[0].id));
+        }
+      } catch (err) {
+        console.error('Failed to load doctors', err);
+      }
+    };
+
+    loadDoctors();
+  }, [token]);
+
+  /* ===============================
+     Fetch Patient Appointments
+  =============================== */
+  const fetchAppointments = async () => {
+    if (!token) return;
+
+    try {
+      const resp = await axios.get('/api/appointments/patient', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAppointments(resp.data || []);
+    } catch (err) {
+      console.error('Failed to load appointments', err);
+    }
+  };
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem(APPOINTMENTS_KEY) || '[]');
-    setAppointments(stored);
-  }, []);
+    fetchAppointments();
+  }, [token]);
 
+  /* ===============================
+     Sync Tab With URL
+  =============================== */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
@@ -98,72 +420,76 @@ const PatientBookings = () => {
     }
   }, [location.search]);
 
-  const currentHospital = useMemo(
-    () => hospitals.find((item) => item.id === hospitalId) || hospitals[0],
-    [hospitalId]
-  );
-
-  const currentDoctor = useMemo(
-    () => currentHospital.doctors.find((item) => item.id === doctorId) || currentHospital.doctors[0],
-    [currentHospital, doctorId]
-  );
-
+  /* ===============================
+     Fetch Available Slots
+  =============================== */
   useEffect(() => {
-    if (!currentHospital.doctors.find((item) => item.id === doctorId)) {
-      setDoctorId(currentHospital.doctors[0].id);
-    }
-  }, [currentHospital, doctorId]);
+    const loadSlots = async () => {
+      if (!doctorId || !selectedDate) {
+        setAvailableTimes([]);
+        return;
+      }
 
-  useEffect(() => {
-    setSelectedDate('');
-    setSelectedTime('');
-  }, [hospitalId, doctorId]);
+      try {
+        const resp = await axios.get('/api/appointments/available', {
+          params: { doctorId, date: selectedDate },
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-  const availableDates = useMemo(() => {
-    const slots = slotsCache[doctorId] || {};
-    return Object.keys(slots).filter((date) => slots[date]?.length);
-  }, [doctorId]);
+        setAvailableTimes(resp.data || []);
+      } catch (err) {
+        console.error('Failed to load slots', err);
+        setAvailableTimes([]);
+      }
+    };
 
-  const availableTimes = useMemo(() => {
-    if (!selectedDate) {
-      return [];
-    }
-    const slots = slotsCache[doctorId] || {};
-    return slots[selectedDate] || [];
-  }, [doctorId, selectedDate]);
+    loadSlots();
+  }, [doctorId, selectedDate, token]);
 
+  /* ===============================
+     Tab Switch
+  =============================== */
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     navigate(`/patient-bookings?tab=${tab}`);
   };
 
-  const handleBook = () => {
-    if (!hospitalId || !doctorId || !selectedDate || !selectedTime || !concern.trim()) {
-      setSuccessMessage('Please complete all fields before booking.');
+  /* ===============================
+     Book Appointment
+  =============================== */
+  const handleBook = async () => {
+    if (!doctorId || !selectedDate || !selectedTime || !concern.trim()) {
+      setSuccessMessage('Please complete all fields.');
       return;
     }
 
-    const newAppointment = {
-      id: Date.now(),
-      patientName: localStorage.getItem('patientName') || 'Rahul Agrawal',
-      hospital: currentHospital.name,
-      doctor: currentDoctor.name,
-      department: currentDoctor.department,
-      date: selectedDate,
-      time: selectedTime,
-      status: 'pending',
-      concern: concern.trim()
-    };
+    try {
+      setLoading(true);
 
-    const updated = [newAppointment, ...appointments];
-    localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updated));
-    setAppointments(updated);
-    setSelectedDate('');
-    setSelectedTime('');
-    setConcern('');
-    setSuccessMessage('Appointment booked successfully.');
-    setActiveTab('all');
-    navigate('/patient-bookings?tab=all');
+      await axios.post(
+        '/api/appointments/book',
+        {
+          doctorId: Number(doctorId),
+          date: selectedDate,
+          time: selectedTime,
+          reason: concern.trim()
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSuccessMessage('Appointment booked successfully (Pending approval).');
+      setSelectedTime('');
+      setConcern('');
+      setSelectedDate('');
+      fetchAppointments();
+      setActiveTab('all');
+    } catch (err) {
+      setSuccessMessage(
+        err.response?.data?.message || 'Slot may already be booked.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -174,10 +500,16 @@ const PatientBookings = () => {
           <p>Manage your bookings and reserve new slots.</p>
         </div>
         <div className="bookings-header-actions">
-          <button className="ghost-btn" onClick={() => navigate('/patient-dashboard')}>
+          <button
+            className="ghost-btn"
+            onClick={() => navigate('/patient-dashboard')}
+          >
             Back to Dashboard
           </button>
-          <button className="primary-btn" onClick={() => handleTabChange('book')}>
+          <button
+            className="primary-btn"
+            onClick={() => handleTabChange('book')}
+          >
             Book Appointment
           </button>
         </div>
@@ -185,14 +517,12 @@ const PatientBookings = () => {
 
       <div className="booking-tabs">
         <button
-          type="button"
           className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
           onClick={() => handleTabChange('all')}
         >
           All Appointments
         </button>
         <button
-          type="button"
           className={`tab-btn ${activeTab === 'book' ? 'active' : ''}`}
           onClick={() => handleTabChange('book')}
         >
@@ -202,31 +532,22 @@ const PatientBookings = () => {
 
       {activeTab === 'all' && (
         <section className="bookings-section">
-          <h2>All appointments</h2>
+          <h2>All Appointments</h2>
+
           {appointments.length === 0 ? (
-            <div className="empty-state">
-              <p>No appointments yet. Book your first visit.</p>
-              <button className="primary-btn" onClick={() => handleTabChange('book')}>
-                Book Appointment
-              </button>
-            </div>
+            <p>No appointments yet.</p>
           ) : (
             <div className="appointments-list">
               {appointments.map((item) => (
                 <div key={item.id} className="appointment-row">
-                  <div>
-                    <h3>{item.doctor}</h3>
-                    <p>{item.department} • {item.hospital}</p>
-                  </div>
-                  <div className="appointment-meta">
-                    <span>{formatDateLabel(item.date)}</span>
-                    <span>{formatTimeLabel(item.time)}</span>
-                    <span className={`status-pill ${item.status}`}>{item.status}</span>
-                  </div>
-                  <div className="appointment-note">
-                    <span>Concern</span>
-                    <p>{item.concern}</p>
-                  </div>
+                  <h3>{item.doctorName}</h3>
+                  <p>
+                    {formatDateLabel(item.appointmentDate)} •{' '}
+                    {formatTimeLabel(item.appointmentTime)}
+                  </p>
+                  <span className={`status-pill ${item.status}`}>
+                    {item.status}
+                  </span>
                 </div>
               ))}
             </div>
@@ -236,92 +557,69 @@ const PatientBookings = () => {
 
       {activeTab === 'book' && (
         <section className="bookings-section">
-          <h2>Book a new appointment</h2>
-          <div className="booking-grid">
-            <div className="booking-card">
-              <label htmlFor="hospital">Select hospital</label>
-              <select
-                id="hospital"
-                value={hospitalId}
-                onChange={(event) => setHospitalId(event.target.value)}
+          <h2>Book a New Appointment</h2>
+
+          <select
+            className="doctor-select"
+            value={doctorId}
+            onChange={(e) => setDoctorId(e.target.value)}
+          >
+            <option value="">Select Doctor</option>
+            {doctors.map((doctor) => (
+              <option key={doctor.id} value={doctor.id}>
+                {doctor.name}
+                {doctor.specialization
+                  ? ` • ${doctor.specialization}`
+                  : ''}
+              </option>
+            ))}
+          </select>
+
+          <div className="calendar-grid">
+            {availableDates.map((date) => (
+              <button
+                key={date}
+                onClick={() => setSelectedDate(date)}
+                className={selectedDate === date ? 'active' : ''}
               >
-                {hospitals.map((hospital) => (
-                  <option key={hospital.id} value={hospital.id}>
-                    {hospital.name}
-                  </option>
-                ))}
-              </select>
-
-              <label htmlFor="doctor">Select doctor</label>
-              <select
-                id="doctor"
-                value={doctorId}
-                onChange={(event) => setDoctorId(event.target.value)}
-              >
-                {currentHospital.doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
-                    {doctor.name} ({doctor.department})
-                  </option>
-                ))}
-              </select>
-
-              <div className="calendar-block">
-                <h3>Available dates</h3>
-                <div className="calendar-grid">
-                  {availableDates.map((date) => (
-                    <button
-                      key={date}
-                      type="button"
-                      className={`date-btn ${selectedDate === date ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedDate(date);
-                        setSelectedTime('');
-                      }}
-                    >
-                      {formatDateLabel(date)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="time-block">
-                <h3>Available time slots</h3>
-                {selectedDate ? (
-                  <div className="time-grid">
-                    {availableTimes.map((time) => (
-                      <button
-                        key={time}
-                        type="button"
-                        className={`time-btn ${selectedTime === time ? 'active' : ''}`}
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {formatTimeLabel(time)}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="muted">Select a date to view time slots.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="booking-card">
-              <label htmlFor="concern">Describe your concern</label>
-              <textarea
-                id="concern"
-                value={concern}
-                onChange={(event) => setConcern(event.target.value)}
-                placeholder="e.g., I have a headache and need a consultation."
-                rows={6}
-              />
-
-              {successMessage && <p className="feedback">{successMessage}</p>}
-
-              <button className="primary-btn" onClick={handleBook}>
-                Book Appointment
+                {formatDateLabel(date)}
               </button>
-            </div>
+            ))}
           </div>
+
+          <div className="time-grid">
+            {availableTimes.length === 0 ? (
+              <p className="no-slots">No slots available</p>
+            ) : (
+              availableTimes.map((time) => (
+                <button
+                  key={time}
+                  onClick={() => setSelectedTime(time)}
+                  className={`time-btn ${
+                    selectedTime === time ? 'active' : ''
+                  }`}
+                >
+                  {formatTimeLabel(time)}
+                </button>
+              ))
+            )}
+          </div>
+
+          <textarea
+            value={concern}
+            onChange={(e) => setConcern(e.target.value)}
+            placeholder="Describe your concern"
+          />
+
+          {successMessage && <p className="feedback">{successMessage}</p>}
+
+          <button
+            className="primary-btn"
+            onClick={handleBook}
+            disabled={loading}
+          >
+            {loading ? 'Booking...' : 'Book Appointment'}
+          </button>
         </section>
       )}
     </div>

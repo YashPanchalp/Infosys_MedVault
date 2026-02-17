@@ -6,12 +6,12 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 import java.security.Key;
+import io.jsonwebtoken.Claims;
 
 @Component
 public class JwtUtil {
 
     private static final String SECRET_KEY = "medvault_secret_key_medvault_secret_key";
-
     private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
     public String generateToken(String email, String role) {
@@ -23,25 +23,29 @@ public class JwtUtil {
                 .signWith(key)
                 .compact();
     }
+
     public String extractEmail(String token) {
-    return Jwts.parserBuilder()
-            .setSigningKey(key)
-            .build()
-            .parseClaimsJws(token)
-            .getBody()
-            .getSubject();
-}
-
-public boolean isTokenValid(String token) {
-    try {
-        Jwts.parserBuilder()
-            .setSigningKey(key)
-            .build()
-            .parseClaimsJws(token);
-        return true;
-    } catch (Exception e) {
-        return false;
+        return extractAllClaims(token).getSubject();
     }
-}
 
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+            extractAllClaims(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

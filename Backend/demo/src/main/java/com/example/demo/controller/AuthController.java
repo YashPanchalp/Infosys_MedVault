@@ -110,13 +110,22 @@ public String verifyOtpAndRegister(@RequestBody VerifyOtpRequest request) {
 }
 
 @PostMapping("/login/request-otp")
-public String requestLoginOtp(@RequestBody LoginOtpRequest request) {
+public ResponseEntity<?> requestLoginOtp(@RequestBody LoginOtpRequest request) {
 
-    User user = userRepository.findByEmail(request.email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+    Optional<User> optionalUser = userRepository.findByEmail(request.email);
+
+    if (optionalUser.isEmpty()) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body("User not found");
+    }
+
+    User user = optionalUser.get();
 
     if (!passwordEncoder.matches(request.password, user.getPassword())) {
-        throw new RuntimeException("Invalid credentials");
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body("Invalid credentials");
     }
 
     emailOtpRepository.deleteByEmail(request.email);
@@ -131,8 +140,31 @@ public String requestLoginOtp(@RequestBody LoginOtpRequest request) {
     emailOtpRepository.save(emailOtp);
     emailService.sendOtp(request.email, otp);
 
-    return "Login OTP sent to email";
+    return ResponseEntity.ok("Login OTP sent to email");
 }
+
+@PostMapping("/login/resend-otp")
+public ResponseEntity<?> resendLoginOtp(@RequestBody OtpRequest request) {
+
+    User user = userRepository.findByEmail(request.email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    emailOtpRepository.deleteByEmail(request.email);
+
+    String otp = String.valueOf((int)(Math.random() * 900000) + 100000);
+
+    EmailOtp emailOtp = new EmailOtp();
+    emailOtp.setEmail(request.email);
+    emailOtp.setOtp(otp);
+    emailOtp.setExpiryTime(LocalDateTime.now().plusMinutes(5));
+
+    emailOtpRepository.save(emailOtp);
+    emailService.sendOtp(request.email, otp);
+     System.out.println("RESEND OTP CALLED");
+System.out.println("Generated OTP: " + otp);
+    return ResponseEntity.ok("OTP resent successfully");
+}
+
 
 @PostMapping("/login/verify-otp")
 @Transactional

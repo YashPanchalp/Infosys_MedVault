@@ -1,5 +1,8 @@
 package com.example.demo.controller;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -7,9 +10,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.AppointmentRequest;
+import com.example.demo.dto.AppointmentResponse;
 import com.example.demo.dto.UpdateStatusRequest;
 import com.example.demo.service.AppointmentService;
 import org.springframework.security.core.Authentication;
@@ -25,7 +30,7 @@ public class AppointmentController {
         this.appointmentService = appointmentService;
     }
 
-    @PostMapping
+    @PostMapping("/book")
     public ResponseEntity<?> bookAppointment(@RequestBody AppointmentRequest request,
                                              Authentication authentication) {
 
@@ -44,6 +49,40 @@ public ResponseEntity<?> getDoctorAppointments(Authentication authentication) {
 
     return ResponseEntity.ok(
             appointmentService.getDoctorAppointments(doctorEmail)
+    );
+}
+
+@GetMapping("/patient")
+public ResponseEntity<?> getPatientAppointments(Authentication authentication) {
+
+    String patientEmail = authentication.getName();
+
+    return ResponseEntity.ok(
+            appointmentService.getPatientAppointments(patientEmail)
+    );
+}
+
+@GetMapping("/doctor/today")
+public ResponseEntity<?> getTodayAppointments(Authentication authentication) {
+
+    String email = authentication.getName();
+
+    List<AppointmentResponse> appointments =
+            appointmentService.getTodayAppointmentsForDoctor(email);
+
+    return ResponseEntity.ok(appointments);
+}
+
+@GetMapping("/available")
+public ResponseEntity<?> getAvailableSlots(
+        @RequestParam Long doctorId,
+        @RequestParam String date) {
+
+    return ResponseEntity.ok(
+            appointmentService.getAvailableSlots(
+                    doctorId,
+                    LocalDate.parse(date)
+            )
     );
 }
 

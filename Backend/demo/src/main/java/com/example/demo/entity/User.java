@@ -10,10 +10,29 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
+private Boolean enabled = true;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private PatientProfile patientProfile;
 
     private String name;
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public PatientProfile getPatientProfile() {
+        return patientProfile;
+    }
+
+    public void setPatientProfile(PatientProfile patientProfile) {
+        this.patientProfile = patientProfile;
+    }
 
     @Column(unique = true, nullable = false)
     private String email;

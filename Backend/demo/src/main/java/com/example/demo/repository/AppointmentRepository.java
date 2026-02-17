@@ -26,5 +26,14 @@ List<Appointment> findByPatientAndStatus(User patient, AppointmentStatus status)
 
 List<Appointment> findByDoctorAndStatus(User doctor, AppointmentStatus status);
 
+List<Appointment> findByDoctorEmailAndAppointmentDateAndStatus(
+        String email,
+        LocalDate date,
+        AppointmentStatus status
+    );
+
+    List<Appointment> findByDoctorAndAppointmentDate(User doctor, LocalDate date);
 }
+
+
 

@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -80,6 +81,44 @@ public class AppointmentService {
     return appointmentRepository.findByDoctor(doctor)
             .stream()
             .map(this::mapToResponse)
+            .toList();
+}
+
+public List<AppointmentResponse> getTodayAppointmentsForDoctor(String email) {
+
+    LocalDate today = LocalDate.now();
+
+    List<Appointment> appointments =
+            appointmentRepository.findByDoctorEmailAndAppointmentDateAndStatus(
+                    email,
+                    today,
+                    AppointmentStatus.APPROVED
+            );
+
+    return appointments.stream()
+            .map(AppointmentResponse::new)
+            .toList();
+}
+
+public List<String> getAvailableSlots(Long doctorId, LocalDate date) {
+
+    User doctor = userRepository.findById(doctorId)
+            .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+    // Clinic fixed timings (you can later move this to DB)
+    List<String> allSlots = List.of(
+            "09:00", "10:30", "12:00", "15:00", "16:30"
+    );
+
+    List<Appointment> booked =
+            appointmentRepository.findByDoctorAndAppointmentDate(doctor, date);
+
+    List<String> bookedTimes = booked.stream()
+            .map(a -> a.getAppointmentTime().toString())
+            .toList();
+
+    return allSlots.stream()
+            .filter(slot -> !bookedTimes.contains(slot))
             .toList();
 }
 

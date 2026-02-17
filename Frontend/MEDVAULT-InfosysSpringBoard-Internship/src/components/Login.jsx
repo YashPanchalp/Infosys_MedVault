@@ -6,6 +6,7 @@ import axios from "axios";
 const Login = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState('light');
+  const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -31,30 +32,31 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
   e.preventDefault();
+  setErrorMessage("");   // clear old error
 
   try {
-    const response = await axios.post("/api/auth/login/request-otp", {
+     await axios.post("/api/auth/login/request-otp", {
       email: formData.username,
       password: formData.password
     });
 
-    console.log(response.data);
-
-    // If login success
-   navigate('/otp-verify', {
-  state: {
-    type: "login",
-    userData: {
-      email: formData.username
-    }
-  }
-});
-
+    navigate('/otp-verify', {
+      state: {
+        type: "login",
+        userData: {
+          email: formData.username
+        }
+      }
+    });
 
   } catch (error) {
-    console.error("Login failed:", error);
+    if (error.response) {
+      setErrorMessage(error.response.data);
+    } else {
+      setErrorMessage("Something went wrong.");
+    }
   }
 };
 
@@ -118,7 +120,7 @@ const Login = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Enter your username"
+                placeholder="Enter your email"
                 required
               />
             </div>
@@ -143,6 +145,12 @@ const Login = () => {
                 placeholder="Enter your password"
                 required
               />
+              {errorMessage && (
+  <p style={{ color: "red", marginTop: "10px" }}>
+    {errorMessage}
+  </p>
+)}
+
             </div>
           </div>
 

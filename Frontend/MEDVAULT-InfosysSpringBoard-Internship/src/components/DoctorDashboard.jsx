@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './DoctorDashboard.css';
 
 const APPOINTMENTS_KEY = 'patientAppointments';
 
 const formatTimeLabel = (timeValue) => {
-  const [hours, minutes] = timeValue.split(':');
+  if (!timeValue) return '';
+  const [hours = '0', minutes = '0'] = (timeValue || '').split(':');
   const date = new Date();
   date.setHours(Number(hours), Number(minutes), 0, 0);
   return date.toLocaleTimeString('en-US', {
@@ -28,7 +30,7 @@ const getInitials = (name) => {
 const DoctorDashboard = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState('light');
-  const [userName] = useState('Dr. Asha Sharma');
+  const [userName, setUserName] = useState('');
   const [showStats, setShowStats] = useState(true);
   const [todayAppointments, setTodayAppointments] = useState([]);
 
@@ -38,57 +40,86 @@ const DoctorDashboard = () => {
     document.documentElement.dataset.theme = savedTheme;
   }, []);
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem(APPOINTMENTS_KEY) || '[]');
-    const today = new Date().toISOString().slice(0, 10);
-    const todays = stored
-      .filter((item) => item.date === today && item.status === 'confirmed')
-      .map((item) => ({
-        ...item,
-        dateTime: new Date(`${item.date}T${item.time}`)
-      }))
-      .sort((a, b) => a.dateTime - b.dateTime);
-    if (todays.length > 0) {
-      setTodayAppointments(todays);
-      return;
+ useEffect(() => {
+  const loadAppointments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token');
+
+      const resp = await axios.get('/api/appointments/doctor', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = resp.data || [];
+
+      const now = new Date();
+
+      const upcoming = data
+        .filter((item) => item.status === 'APPROVED')
+        .map((item) => {
+          const patientName =
+            item.patientName ||
+            (item.patient && (item.patient.name || item.patient.fullName)) ||
+            'Patient';
+
+          const time = item.appointmentTime || item.time || '';
+
+          const dateTime = new Date(
+            `${item.appointmentDate}T${time}`
+          );
+
+          return {
+            id: item.id,
+            patientName,
+            department: item.department || '',
+            hospital: item.hospital || '',
+            time,
+            appointmentDate: item.appointmentDate,
+            appointmentTime: time,
+            dateTime,
+            status: item.status
+          };
+        })
+        .filter((item) => item.dateTime && item.dateTime >= now)
+        .sort((a, b) => a.dateTime - b.dateTime);
+
+      setTodayAppointments(upcoming);
+    } catch (err) {
+      console.error('Failed to load appointments', err);
+      setTodayAppointments([]);
     }
-    const sample = [
-      {
-        id: 1,
-        patientName: 'Aarav Singh',
-        department: 'Cardiology',
-        hospital: 'CityCare Hospital',
-        time: '09:15'
-      },
-      {
-        id: 2,
-        patientName: 'Meera Patel',
-        department: 'Hypertension',
-        hospital: 'Green Valley Clinic',
-        time: '11:05'
-      },
-      {
-        id: 3,
-        patientName: 'Nisha Verma',
-        department: 'Wellness',
-        hospital: 'CityCare Hospital',
-        time: '13:40'
-      },
-      {
-        id: 4,
-        patientName: 'Kabir Das',
-        department: 'Follow-up',
-        hospital: 'Green Valley Clinic',
-        time: '15:20'
-      }
-    ].map((item) => ({
-      ...item,
-      date: today,
-      status: 'confirmed',
-      dateTime: new Date(`${today}T${item.time}`)
-    }));
-    setTodayAppointments(sample);
-  }, []);
+  };
+
+  loadAppointments();
+}, []);
+
+
+  useEffect(() => {
+  const fetchDoctorProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get('/api/doctor/profile', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const doctor = response.data;
+
+      // Adjust field name based on your backend
+      const name = doctor?.user?.name;
+
+      setUserName(name || 'Doctor');
+    } catch (error) {
+      console.error('Failed to fetch doctor profile', error);
+    }
+  };
+
+  fetchDoctorProfile();
+}, []);
+
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -312,7 +343,7 @@ const DoctorDashboard = () => {
               <div className="section-header">
                 <div>
                   <h2 className="section-title">Upcoming appointments</h2>
-                  <p className="section-subtitle">Today&apos;s confirmed visits</p>
+                  <p className="section-subtitle">All upcoming approved appointments</p>
                 </div>
                 <div className="section-actions">
                   <button className="primary-btn" onClick={() => handleCardAction('/doctor-bookings')}>
