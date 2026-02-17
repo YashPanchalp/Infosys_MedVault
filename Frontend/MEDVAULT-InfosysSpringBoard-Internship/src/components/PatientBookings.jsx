@@ -1,9 +1,11 @@
-// import React, { useEffect, useMemo, useState } from 'react';
+
+// import React, { useEffect, useState } from 'react';
 // import axios from 'axios';
 // import { useLocation, useNavigate } from 'react-router-dom';
 // import './PatientBookings.css';
+// import DatePicker from "react-datepicker";
+// import "react-datepicker/dist/react-datepicker.css";
 
-// const baseSlots = ['09:00', '10:30', '12:00', '15:00', '16:30'];
 
 // const formatDateLabel = (dateValue) => {
 //   const date = new Date(dateValue);
@@ -35,32 +37,24 @@
 //   return dates;
 // };
 
-// const buildSlotsForDoctor = (doctorId) => {
-//   const dates = getNextDates(10);
-//   const slotsByDate = {};
-//   dates.forEach((date, index) => {
-//     const offset = String(doctorId || '').length % 3;
-//     const start = (index + offset) % 2 === 0 ? 0 : 2;
-//     slotsByDate[date] = baseSlots.slice(start, start + 3);
-//   });
-//   return slotsByDate;
-// };
-
 // const PatientBookings = () => {
 //   const navigate = useNavigate();
 //   const location = useLocation();
+//   const token = localStorage.getItem('token');
 
 //   const [activeTab, setActiveTab] = useState('all');
 //   const [appointments, setAppointments] = useState([]);
 //   const [doctors, setDoctors] = useState([]);
 //   const [doctorId, setDoctorId] = useState('');
-//   const [selectedDate, setSelectedDate] = useState('');
+//   const [selectedDateObj, setSelectedDateObj] = useState(null);
+
+//   const [availableTimes, setAvailableTimes] = useState([]);
 //   const [selectedTime, setSelectedTime] = useState('');
 //   const [concern, setConcern] = useState('');
 //   const [successMessage, setSuccessMessage] = useState('');
 //   const [loading, setLoading] = useState(false);
 
-//   const token = localStorage.getItem('token');
+//   const availableDates = getNextDates(10);
 
 //   /* ===============================
 //      Fetch Doctors
@@ -117,24 +111,30 @@
 //   }, [location.search]);
 
 //   /* ===============================
-//      Reset Date/Time When Doctor Changes
+//      Fetch Available Slots
 //   =============================== */
 //   useEffect(() => {
-//     setSelectedDate('');
-//     setSelectedTime('');
-//   }, [doctorId]);
+//     const loadSlots = async () => {
+//       if (!doctorId || !selectedDate) {
+//         setAvailableTimes([]);
+//         return;
+//       }
 
-//   /* ===============================
-//      Slot Calculations
-//   =============================== */
-//   const availableDates = useMemo(() => {
-//     return Object.keys(buildSlotsForDoctor(doctorId));
-//   }, [doctorId]);
+//       try {
+//         const resp = await axios.get('/api/appointments/available', {
+//           params: { doctorId, date: selectedDate },
+//           headers: { Authorization: `Bearer ${token}` }
+//         });
 
-//   const availableTimes = useMemo(() => {
-//     if (!selectedDate) return [];
-//     return buildSlotsForDoctor(doctorId)[selectedDate] || [];
-//   }, [doctorId, selectedDate]);
+//         setAvailableTimes(resp.data || []);
+//       } catch (err) {
+//         console.error('Failed to load slots', err);
+//         setAvailableTimes([]);
+//       }
+//     };
+
+//     loadSlots();
+//   }, [doctorId, selectedDate, token]);
 
 //   /* ===============================
 //      Tab Switch
@@ -164,21 +164,16 @@
 //           time: selectedTime,
 //           reason: concern.trim()
 //         },
-//         {
-//           headers: { Authorization: `Bearer ${token}` }
-//         }
+//         { headers: { Authorization: `Bearer ${token}` } }
 //       );
 
 //       setSuccessMessage('Appointment booked successfully (Pending approval).');
-//       setSelectedDate('');
 //       setSelectedTime('');
 //       setConcern('');
-
-//       await fetchAppointments();
+//       setSelectedDate('');
+//       fetchAppointments();
 //       setActiveTab('all');
-
 //     } catch (err) {
-//       console.error(err);
 //       setSuccessMessage(
 //         err.response?.data?.message || 'Slot may already be booked.'
 //       );
@@ -255,40 +250,50 @@
 //           <h2>Book a New Appointment</h2>
 
 //           <select
+//             className="doctor-select"
 //             value={doctorId}
 //             onChange={(e) => setDoctorId(e.target.value)}
 //           >
+//             <option value="">Select Doctor</option>
 //             {doctors.map((doctor) => (
 //               <option key={doctor.id} value={doctor.id}>
-//   {doctor.name}
-//   {doctor.specialization ? ` (${doctor.specialization})` : ''}
-// </option>
-
+//                 {doctor.name}
+//                 {doctor.specialization
+//                   ? ` • ${doctor.specialization}`
+//                   : ''}
+//               </option>
 //             ))}
 //           </select>
 
-//           <div className="calendar-grid">
-//             {availableDates.map((date) => (
-//               <button
-//                 key={date}
-//                 onClick={() => setSelectedDate(date)}
-//                 className={selectedDate === date ? 'active' : ''}
-//               >
-//                 {formatDateLabel(date)}
-//               </button>
-//             ))}
-//           </div>
+//           <DatePicker
+//   selected={selectedDateObj}
+//   onChange={(date) => {
+//     setSelectedDateObj(date);
+//     const formatted = date.toISOString().slice(0, 10);
+//     setSelectedDate(formatted);
+//   }}
+//   minDate={new Date()}
+//   placeholderText="Select appointment date"
+//   className="doctor-select"
+// />
+
 
 //           <div className="time-grid">
-//             {availableTimes.map((time) => (
-//               <button
-//                 key={time}
-//                 onClick={() => setSelectedTime(time)}
-//                 className={selectedTime === time ? 'active' : ''}
-//               >
-//                 {formatTimeLabel(time)}
-//               </button>
-//             ))}
+//             {availableTimes.length === 0 ? (
+//               <p className="no-slots">No slots available</p>
+//             ) : (
+//               availableTimes.map((time) => (
+//                 <button
+//                   key={time}
+//                   onClick={() => setSelectedTime(time)}
+//                   className={`time-btn ${
+//                     selectedTime === time ? 'active' : ''
+//                   }`}
+//                 >
+//                   {formatTimeLabel(time)}
+//                 </button>
+//               ))
+//             )}
 //           </div>
 
 //           <textarea
@@ -317,6 +322,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './PatientBookings.css';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const formatDateLabel = (dateValue) => {
   const date = new Date(dateValue);
@@ -337,17 +344,6 @@ const formatTimeLabel = (timeValue) => {
   });
 };
 
-const getNextDates = (count = 7) => {
-  const today = new Date();
-  const dates = [];
-  for (let i = 0; i < count; i++) {
-    const next = new Date(today);
-    next.setDate(today.getDate() + i);
-    dates.push(next.toISOString().slice(0, 10));
-  }
-  return dates;
-};
-
 const PatientBookings = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -357,14 +353,15 @@ const PatientBookings = () => {
   const [appointments, setAppointments] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [doctorId, setDoctorId] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+
+  const [selectedDateObj, setSelectedDateObj] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(''); // ✅ FIXED
+
   const [availableTimes, setAvailableTimes] = useState([]);
   const [selectedTime, setSelectedTime] = useState('');
   const [concern, setConcern] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const availableDates = getNextDates(10);
 
   /* ===============================
      Fetch Doctors
@@ -481,6 +478,7 @@ const PatientBookings = () => {
       setSelectedTime('');
       setConcern('');
       setSelectedDate('');
+      setSelectedDateObj(null); // ✅ reset calendar
       fetchAppointments();
       setActiveTab('all');
     } catch (err) {
@@ -575,17 +573,17 @@ const PatientBookings = () => {
             ))}
           </select>
 
-          <div className="calendar-grid">
-            {availableDates.map((date) => (
-              <button
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                className={selectedDate === date ? 'active' : ''}
-              >
-                {formatDateLabel(date)}
-              </button>
-            ))}
-          </div>
+          <DatePicker
+            selected={selectedDateObj}
+            onChange={(date) => {
+              setSelectedDateObj(date);
+              const formatted = date.toISOString().slice(0, 10);
+              setSelectedDate(formatted);
+            }}
+            minDate={new Date()}
+            placeholderText="Select appointment date"
+            className="doctor-select"
+          />
 
           <div className="time-grid">
             {availableTimes.length === 0 ? (
