@@ -604,6 +604,7 @@ const PatientBookings = () => {
           </div>
 
           <textarea
+            className="concern-input"
             value={concern}
             onChange={(e) => setConcern(e.target.value)}
             placeholder="Describe your concern"

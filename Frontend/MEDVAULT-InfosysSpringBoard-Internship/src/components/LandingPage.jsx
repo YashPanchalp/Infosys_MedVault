@@ -83,6 +83,42 @@ const LandingPage = () => {
             </button>
           </div>
 
+          <div className="landing-hero-visuals" aria-label="Professional medical care visuals">
+            <article className="landing-image-card landing-image-card-lg">
+              <img
+                src="https://images.pexels.com/photos/1170979/pexels-photo-1170979.jpeg?auto=compress&cs=tinysrgb&w=1400"
+                alt="Doctor consulting with a patient in a modern medical clinic"
+                loading="lazy"
+              />
+              <div className="landing-image-overlay">
+                <h3>Doctor-Patient Consultation</h3>
+                <p>Compassionate and coordinated healthcare delivery.</p>
+              </div>
+            </article>
+
+            <article className="landing-image-card">
+              <img
+                src="https://images.pexels.com/photos/8376233/pexels-photo-8376233.jpeg?auto=compress&cs=tinysrgb&w=1000"
+                alt="Healthcare team reviewing digital reports together"
+                loading="lazy"
+              />
+              <div className="landing-image-overlay">
+                <h3>Clinical Team Collaboration</h3>
+              </div>
+            </article>
+
+            <article className="landing-image-card">
+              <img
+                src="https://images.pexels.com/photos/7089020/pexels-photo-7089020.jpeg?auto=compress&cs=tinysrgb&w=1000"
+                alt="Medical specialist using digital healthcare tools"
+                loading="lazy"
+              />
+              <div className="landing-image-overlay">
+                <h3>Smart Digital Workflows</h3>
+              </div>
+            </article>
+          </div>
+
           <div className="landing-stats-grid">
             <article className="landing-stat-card">
               <h3>3 User Roles</h3>

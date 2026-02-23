@@ -321,13 +321,33 @@
   cursor: not-allowed;
 }
 
-#concern-input {
+.concern-input {
+  width: 100%;
   min-height: 120px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
   resize: vertical;
-  line-height: 1.5;
+  transition: all var(--transition-normal);
 }
 
-#concern-input::placeholder {
+.concern-input:hover {
+  border-color: var(--primary-light);
+  background: var(--bg-hover);
+}
+
+.concern-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.concern-input::placeholder {
   color: var(--text-muted);
 }
 
