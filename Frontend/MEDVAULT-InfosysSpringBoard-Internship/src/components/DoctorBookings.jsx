@@ -215,50 +215,97 @@ const DoctorBookings = () => {
 </div>
 
       <section className="analytics-strip">
-        <div>Approved: {analytics.approvedCount}</div>
-        <div>Pending: {analytics.pendingCount}</div>
-        <div>Rejected: {analytics.rejectedCount}</div>
-        <div>
-          Next Slot:{" "}
-          {analytics.nextAppointment
-            ? formatDateLabel(analytics.nextAppointment.appointmentDate)
-            : "None"}
-        </div>
+        <article className="analytics-card">
+          <span>Approved</span>
+          <h3>{analytics.approvedCount}</h3>
+          <p>Confirmed appointments</p>
+        </article>
+        <article className="analytics-card">
+          <span>Pending</span>
+          <h3>{analytics.pendingCount}</h3>
+          <p>Awaiting decision</p>
+        </article>
+        <article className="analytics-card">
+          <span>Rejected</span>
+          <h3>{analytics.rejectedCount}</h3>
+          <p>Declined requests</p>
+        </article>
+        <article className="analytics-card">
+          <span>Next Slot</span>
+          <h3>
+            {analytics.nextAppointment
+              ? formatDateLabel(analytics.nextAppointment.appointmentDate)
+              : "None"}
+          </h3>
+          <p>
+            {analytics.nextAppointment
+              ? formatTimeLabel(analytics.nextAppointment.appointmentTime)
+              : "No upcoming approved"}
+          </p>
+        </article>
       </section>
 
-      {activeTab === "pending" &&
-        pendingAppointments.map((item) => (
-          <div key={item.id} className="appointment-card">
-            <div className="patient-header">
-              <div className="avatar">{getInitials(item.patientName)}</div>
-              <h3>{item.patientName}</h3>
+      {activeTab === "pending" && (
+        <section className="bookings-section">
+          <h2>Pending Requests</h2>
+          {pendingAppointments.length === 0 ? (
+            <div className="empty-state">
+              <h3>No pending appointments</h3>
+              <p className="muted">New booking requests will appear here.</p>
             </div>
-            <p>
-              {formatDateLabel(item.appointmentDate)} -{" "}
-              {formatTimeLabel(item.appointmentTime)}
-            </p>
-            <p>{item.reason}</p>
+          ) : (
+            <div className="appointments-list">
+              {pendingAppointments.map((item) => (
+                <article key={item.id} className="appointment-card pending-card">
+                  <div className="appointment-main">
+                    <div className="patient-profile">
+                      <div className="patient-avatar">{getInitials(item.patientName)}</div>
+                      <div>
+                        <h3>{item.patientName}</h3>
+                        <p>
+                          {formatDateLabel(item.appointmentDate)} • {formatTimeLabel(item.appointmentTime)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="appointment-note">
+                      <span>Reason</span>
+                      <p>{item.reason || "Not provided"}</p>
+                    </div>
+                    <span className="status-pill pending">Pending</span>
+                  </div>
 
-            <button onClick={() => handleApprove(item.id)}>Approve</button>
-            <button onClick={() => handleRejectToggle(item.id)}>
-              {rejectOpen[item.id] ? "Confirm Reject" : "Reject"}
-            </button>
-            {rejectOpen[item.id] && (
-              <div className="reject-input">
-                <textarea
-                  value={rejectReasons[item.id] || ""}
-                  onChange={(e) =>
-                    setRejectReasons((prev) => ({ ...prev, [item.id]: e.target.value }))
-                  }
-                  placeholder="Add rejection reason"
-                />
-                {rejectErrors[item.id] && (
-                  <div className="error">{rejectErrors[item.id]}</div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+                  <div className="appointment-actions">
+                    <div className="action-buttons">
+                      <button className="primary-btn" onClick={() => handleApprove(item.id)}>
+                        Approve
+                      </button>
+                      <button className="danger-btn" onClick={() => handleRejectToggle(item.id)}>
+                        {rejectOpen[item.id] ? "Confirm Reject" : "Reject"}
+                      </button>
+                    </div>
+                    {rejectOpen[item.id] && (
+                      <div className="reject-panel">
+                        <label htmlFor={`reject-reason-${item.id}`}>Rejection Reason</label>
+                        <textarea
+                          id={`reject-reason-${item.id}`}
+                          value={rejectReasons[item.id] || ""}
+                          onChange={(e) =>
+                            setRejectReasons((prev) => ({ ...prev, [item.id]: e.target.value }))
+                          }
+                          placeholder="Add rejection reason"
+                        />
+                        {rejectErrors[item.id] && (
+                          <div className="feedback error">{rejectErrors[item.id]}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {activeTab === "approved" &&
   approvedAppointments.map((item) => (
@@ -290,12 +337,35 @@ const DoctorBookings = () => {
     </div>
   ))}
 
-      {activeTab === "all" &&
-        appointments.map((item) => (
-          <div key={item.id}>
-            {item.patientName} - {item.status}
-          </div>
-        ))}
+      {activeTab === "all" && (
+        <section className="bookings-section">
+          <h2>All Appointments</h2>
+          {appointments.length === 0 ? (
+            <div className="empty-state">
+              <h3>No appointments found</h3>
+              <p className="muted">Appointments will appear here when patients book slots.</p>
+            </div>
+          ) : (
+            <div className="appointments-list">
+              {appointments.map((item) => (
+                <article key={item.id} className="appointment-row">
+                  <div className="appointment-main">
+                    <h3>{item.patientName}</h3>
+                    <p>{item.reason || "No reason added"}</p>
+                  </div>
+                  <div className="appointment-meta">
+                    <span>{formatDateLabel(item.appointmentDate)}</span>
+                    <span>{formatTimeLabel(item.appointmentTime)}</span>
+                  </div>
+                  <span className={`status-pill ${(item.status || "").toLowerCase()}`}>
+                    {item.status}
+                  </span>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 };

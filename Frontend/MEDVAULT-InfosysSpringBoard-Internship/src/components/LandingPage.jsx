@@ -31,6 +31,7 @@ const LandingPage = () => {
           <li><a href="#home">Home</a></li>
           <li><a href="#about">About Us</a></li>
           <li><a href="#features">Functionality</a></li>
+          <li><a href="#security">Security</a></li>
         </ul>
 
         <div className="landing-auth-actions">
@@ -82,6 +83,42 @@ const LandingPage = () => {
             </button>
           </div>
 
+          <div className="landing-hero-visuals" aria-label="Professional medical care visuals">
+            <article className="landing-image-card landing-image-card-lg">
+              <img
+                src="https://images.pexels.com/photos/1170979/pexels-photo-1170979.jpeg?auto=compress&cs=tinysrgb&w=1400"
+                alt="Doctor consulting with a patient in a modern medical clinic"
+                loading="lazy"
+              />
+              <div className="landing-image-overlay">
+                <h3>Doctor-Patient Consultation</h3>
+                <p>Compassionate and coordinated healthcare delivery.</p>
+              </div>
+            </article>
+
+            <article className="landing-image-card">
+              <img
+                src="https://images.pexels.com/photos/8376233/pexels-photo-8376233.jpeg?auto=compress&cs=tinysrgb&w=1000"
+                alt="Healthcare team reviewing digital reports together"
+                loading="lazy"
+              />
+              <div className="landing-image-overlay">
+                <h3>Clinical Team Collaboration</h3>
+              </div>
+            </article>
+
+            <article className="landing-image-card">
+              <img
+                src="https://images.pexels.com/photos/7089020/pexels-photo-7089020.jpeg?auto=compress&cs=tinysrgb&w=1000"
+                alt="Medical specialist using digital healthcare tools"
+                loading="lazy"
+              />
+              <div className="landing-image-overlay">
+                <h3>Smart Digital Workflows</h3>
+              </div>
+            </article>
+          </div>
+
           <div className="landing-stats-grid">
             <article className="landing-stat-card">
               <h3>3 User Roles</h3>
@@ -95,7 +132,26 @@ const LandingPage = () => {
               <h3>Unified Workflows</h3>
               <p>Bookings, profiles, and account management in one portal.</p>
             </article>
+            <article className="landing-stat-card">
+              <h3>24/7 Access</h3>
+              <p>Cloud-based access for users and teams from anywhere.</p>
+            </article>
           </div>
+        </section>
+
+        <section className="landing-value-strip">
+          <article>
+            <h3>Faster Appointment Operations</h3>
+            <p>Streamlined scheduling and status updates reduce wait times and manual follow-ups.</p>
+          </article>
+          <article>
+            <h3>Better Care Coordination</h3>
+            <p>Doctors and patients stay aligned with shared appointment context and profile visibility.</p>
+          </article>
+          <article>
+            <h3>Operational Clarity</h3>
+            <p>Role-based dashboards give every user the actions and information they need instantly.</p>
+          </article>
         </section>
 
         <section className="landing-about" id="about">
@@ -161,6 +217,28 @@ const LandingPage = () => {
           </div>
         </section>
 
+        <section className="landing-security" id="security">
+          <h2>Security & Reliability</h2>
+          <div className="landing-security-grid">
+            <article className="landing-security-card">
+              <h3>Role-Based Access Control</h3>
+              <p>Data visibility is restricted by user role to protect patient confidentiality.</p>
+            </article>
+            <article className="landing-security-card">
+              <h3>Session & Credential Protection</h3>
+              <p>Authentication and password recovery flows are built with secure verification checkpoints.</p>
+            </article>
+            <article className="landing-security-card">
+              <h3>Audit-Friendly Structure</h3>
+              <p>Standardized workflows support clear operational tracing and accountability.</p>
+            </article>
+            <article className="landing-security-card">
+              <h3>Scalable Foundation</h3>
+              <p>The architecture supports future expansion across departments and facilities.</p>
+            </article>
+          </div>
+        </section>
+
         <section className="landing-workflow">
           <h2>How It Works</h2>
           <div className="landing-workflow-grid">
@@ -197,6 +275,21 @@ const LandingPage = () => {
               <h3>For Admins</h3>
               <p>Control system operations, user records, and platform-level oversight.</p>
             </article>
+          </div>
+        </section>
+
+        <section className="landing-cta-band">
+          <h2>Ready to Modernize Your Healthcare Workflow?</h2>
+          <p>
+            Join MedVault to improve appointment management, user coordination, and secure digital operations.
+          </p>
+          <div className="landing-hero-actions">
+            <button type="button" className="landing-cta" onClick={() => navigate('/signup')}>
+              Start with MedVault
+            </button>
+            <button type="button" className="landing-cta-secondary" onClick={() => navigate('/login')}>
+              Sign In
+            </button>
           </div>
         </section>
       </main>
