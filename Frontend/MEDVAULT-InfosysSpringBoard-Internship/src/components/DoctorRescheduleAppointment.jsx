@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import './DoctorRescheduleAppointment.css';
 
-const RESCHEDULE_KEY = 'doctor_reschedule_requests';
 
 const DoctorRescheduleAppointment = () => {
   const navigate = useNavigate();
@@ -18,58 +17,86 @@ const DoctorRescheduleAppointment = () => {
   const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const response = await axios.get('/api/appointments/doctor', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setAppointments(response.data || []);
-      } catch (error) {
-        console.error('Failed to load appointments', error);
+  const load = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get('/api/doctor/appointments', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = response.data || [];
+
+      // filter immediately here instead of using useMemo
+      const filtered = data.filter(
+  (item) => item.status?.toUpperCase() === 'APPROVED'
+);
+
+      setAppointments(filtered);
+
+      // Set default selected only once
+      if (!selectedId && filtered.length > 0) {
+        setSelectedAppointmentId(String(filtered[0].id));
       }
-    };
 
-    load();
-  }, []);
-
-  const selectableAppointments = useMemo(
-    () => appointments.filter((item) => item.status === 'APPROVED' || item.status === 'PENDING'),
-    [appointments]
-  );
-
-  useEffect(() => {
-    if (!selectedAppointmentId && selectableAppointments.length > 0) {
-      setSelectedAppointmentId(String(selectableAppointments[0].id));
+    } catch (error) {
+      console.error('Failed to load appointments', error);
     }
-  }, [selectedAppointmentId, selectableAppointments]);
+  };
 
-  const selectedAppointment = useMemo(
-    () => selectableAppointments.find((item) => String(item.id) === String(selectedAppointmentId)),
-    [selectableAppointments, selectedAppointmentId]
-  );
+  load();
+}, []);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    setFeedback('');
+  const selectedAppointment = appointments.find(
+  (item) => String(item.id) === String(selectedAppointmentId)
+);
 
-    if (!selectedAppointmentId || !date || !time) {
-      setFeedback('Please select appointment, date, and time.');
+  const handleSubmit = async (event) => {
+  event.preventDefault();
+  setFeedback('');
+
+  if (!selectedAppointmentId || !date || !time) {
+    setFeedback('Please select appointment, date, and time.');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setFeedback('Unauthorized. Please login again.');
       return;
     }
 
-    const stored = JSON.parse(localStorage.getItem(RESCHEDULE_KEY) || '{}');
-    stored[selectedAppointmentId] = {
-      appointmentId: selectedAppointmentId,
-      date,
-      time,
-      note,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(RESCHEDULE_KEY, JSON.stringify(stored));
-    setFeedback('Reschedule request saved successfully.');
-  };
+    await axios.post(
+  '/api/doctor/appointments/reschedule',
+  {
+    appointmentId: Number(selectedAppointmentId), // ✅ convert to number
+    date,
+    time,
+    note
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+    setFeedback('Appointment rescheduled successfully.');
+setTimeout(() => {
+  navigate('/doctor-dashboard');
+}, 1000);
+    setDate('');
+    setTime('');
+    setNote('');
+
+  } catch (error) {
+    console.error('Reschedule failed', error);
+    setFeedback('Failed to reschedule appointment.');
+  }
+};
 
   return (
     <div className="doctor-reschedule-page">
@@ -88,17 +115,17 @@ const DoctorRescheduleAppointment = () => {
           <div className="form-group full-width">
             <label htmlFor="appointment">Appointment</label>
             <select
-              id="appointment"
-              value={selectedAppointmentId}
-              onChange={(e) => setSelectedAppointmentId(e.target.value)}
-              required
-            >
-              {selectableAppointments.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.patientName || 'Patient'} • {item.appointmentDate} {item.appointmentTime}
-                </option>
-              ))}
-            </select>
+  id="appointment"
+  value={selectedAppointmentId}
+  onChange={(e) => setSelectedAppointmentId(e.target.value)}
+  required
+>
+  {appointments.map((item) => (
+    <option key={item.id} value={item.id}>
+      {item.patientName || 'Patient'} • {item.appointmentDate} {item.appointmentTime}
+    </option>
+  ))}
+</select>
           </div>
 
           <div className="form-group">

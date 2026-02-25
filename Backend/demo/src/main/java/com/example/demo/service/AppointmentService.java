@@ -7,8 +7,10 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.dto.AppointmentRequest;
 import com.example.demo.dto.AppointmentResponse;
+import com.example.demo.dto.AppointmentStatus;
+import com.example.demo.dto.RescheduleRequest;
 import com.example.demo.entity.Appointment;
-import com.example.demo.entity.AppointmentStatus;
+
 import com.example.demo.entity.User;
 import com.example.demo.repository.AppointmentRepository;
 import com.example.demo.repository.UserRepository;
@@ -69,6 +71,7 @@ public class AppointmentService {
         appointmentRepository.save(appointment);
     }
 
+
     public List<AppointmentResponse> getDoctorAppointments(String doctorEmail) {
 
     User doctor = userRepository.findByEmail(doctorEmail)
@@ -78,9 +81,21 @@ public class AppointmentService {
         throw new RuntimeException("Unauthorized access");
     }
 
-    return appointmentRepository.findByDoctor(doctor)
+    return appointmentRepository.findByDoctorId(doctor.getId())
+        .stream()
+        .map(this::mapToResponse)
+        .toList();
+}
+
+public List<AppointmentResponse> getCompletedAppointments(String patientEmail) {
+
+    User patient = userRepository.findByEmail(patientEmail)
+            .orElseThrow();
+
+    return appointmentRepository
+            .findByPatientAndStatus(patient, AppointmentStatus.COMPLETED)
             .stream()
-            .map(this::mapToResponse)
+            .map(AppointmentResponse::new)
             .toList();
 }
 
@@ -120,6 +135,50 @@ public List<String> getAvailableSlots(Long doctorId, LocalDate date) {
     return allSlots.stream()
             .filter(slot -> !bookedTimes.contains(slot))
             .toList();
+}
+
+public void rescheduleAppointment(RescheduleRequest request,
+                                  String doctorEmail) {
+
+    Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
+            .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+    // 🔐 Security check
+    if (!appointment.getDoctor().getEmail().equals(doctorEmail)) {
+        throw new RuntimeException("Unauthorized action");
+    }
+
+    // 🚫 Prevent rescheduling cancelled appointment
+    if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+        throw new RuntimeException("Cannot reschedule cancelled appointment");
+    }
+
+    // 🔥 Prevent double booking (excluding current appointment)
+    boolean exists = appointmentRepository
+            .existsByDoctorAndAppointmentDateAndAppointmentTimeAndIdNot(
+                    appointment.getDoctor(),
+                    request.getDate(),
+                    request.getTime(),
+                    appointment.getId()
+            );
+
+    if (exists) {
+        throw new RuntimeException("Selected slot already booked");
+    }
+
+    // ✅ Update date & time
+    appointment.setAppointmentDate(request.getDate());
+    appointment.setAppointmentTime(request.getTime());
+
+    // Optional note
+    if (request.getNote() != null && !request.getNote().isBlank()) {
+        appointment.setReason(request.getNote());
+    }
+
+    // 🔥 Keep APPROVED
+    appointment.setStatus(AppointmentStatus.APPROVED);
+
+    appointmentRepository.save(appointment);
 }
 
 public void updateAppointmentStatus(Long appointmentId,

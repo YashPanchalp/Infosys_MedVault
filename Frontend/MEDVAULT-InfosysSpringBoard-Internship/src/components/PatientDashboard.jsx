@@ -45,15 +45,13 @@ const PatientDashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const resp = await axios.get('/api/appointments/patient', {
+      const resp = await axios.get('/api/patient/appointments', {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      const data = resp.data || [];
-
-      setAppointments(data);
+      setAppointments(resp.data || []);
 
     } catch (error) {
       console.error('Failed to load appointments', error);
@@ -120,19 +118,23 @@ const PatientDashboard = () => {
 };
 
 
+
  const upcomingAppointments = appointments
-  .filter((item) => item.status !== 'REJECTED')
-  .map((item) => ({
-    ...item,
-    dateTime: new Date(
-      `${item.appointmentDate}T${item.appointmentTime}`
-    )
-  }))
+  .filter((item) => item.status !== 'CANCELLED')
+  .map((item) => {
+    const dateTime = new Date(
+      `${item.appointmentDate}T${item.appointmentTime || "00:00"}`
+    );
+
+    return { ...item, dateTime };
+  })
+  .filter((item) => !isNaN(item.dateTime))
+  .filter((item) => item.dateTime >= new Date())
   .sort((a, b) => a.dateTime - b.dateTime)
   .slice(0, 3);
 
   const nextAppointment = appointments
-  .filter(item => item.status !== 'REJECTED')
+  .filter((item) => item.status !== 'CANCELLED')
   .map(item => ({
     ...item,
     dateTime: new Date(`${item.appointmentDate}T${item.appointmentTime}`)
@@ -391,7 +393,9 @@ const PatientDashboard = () => {
                         <div className="appointment-time">
                           <span className="appointment-date">{formatDateLabel(appointment.appointmentDate)}</span>
                           <span className="appointment-hour">{formatTimeLabel(appointment.appointmentTime)}</span>
-                          <span className="appointment-flag">Upcoming</span>
+                          <span className="appointment-flag">
+  Upcoming
+</span>
                         </div>
                         <div className="appointment-details">
                           <h3>{appointment.doctorName || 'Doctor'}</h3>
@@ -399,13 +403,18 @@ const PatientDashboard = () => {
                         </div>
                       </div>
                       <div className="appointment-actions">
-                        <span className={`status-badge ${appointment.status === 'pending' ? 'pending' : 'confirmed'}`}>
-                          {appointment.status}
-                        </span>
-                        <div className="action-buttons">
-                          <button className="ghost-btn">Reschedule</button>
-                          <button className="danger-btn">Cancel</button>
-                        </div>
+                        <span className={`status-badge ${
+  appointment.status === 'APPROVED'
+    ? 'confirmed'
+    : appointment.status === 'PENDING'
+    ? 'pending'
+    : 'cancelled'
+}`}>
+  {appointment.status}
+</span>
+                        <>
+  <button className="danger-btn">Cancel</button>
+</>
                       </div>
                     </article>
                   ))

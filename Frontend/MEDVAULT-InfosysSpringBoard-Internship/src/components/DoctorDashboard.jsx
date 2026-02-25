@@ -46,10 +46,9 @@ const DoctorDashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token');
 
-      const resp = await axios.get('/api/appointments/doctor', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const resp = await axios.get('/api/doctor/appointments', {
+  headers: { Authorization: `Bearer ${token}` }
+});
       const data = resp.data || [];
 
       const now = new Date();
@@ -375,7 +374,12 @@ const DoctorDashboard = () => {
                               <div className="patient-avatar" aria-hidden="true">
                                 {getInitials(appointment.patientName)}
                               </div>
-                              <h3>{appointment.patientName || 'Patient'}</h3>
+                              <div>
+  <h3>{appointment.patientName || 'Patient'}</h3>
+  <p className="appointment-date">
+    {appointment.appointmentDate}
+  </p>
+</div>
                             </div>
                             <span className="time-pill">{formatTimeLabel(appointment.time)}</span>
                           </div>
@@ -385,7 +389,13 @@ const DoctorDashboard = () => {
                       <div className="appointment-actions">
                         <span className="status-badge confirmed">Confirmed</span>
                         <div className="action-buttons">
-                          <button className="ghost-btn">Reschedule</button>
+                          <button
+  type="button"
+  className="ghost-btn"
+  onClick={() => navigate(`/doctor-appointments/reschedule?id=${appointment.id}`)}
+>
+  Reschedule
+</button>
                           <button className="danger-btn">Cancel</button>
                         </div>
                       </div>

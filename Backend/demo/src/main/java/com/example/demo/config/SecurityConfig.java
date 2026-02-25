@@ -19,33 +19,39 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http
-            .cors(cors -> {})
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
+    http
+        .cors(cors -> {})
+        .csrf(csrf -> csrf.disable())
+        .authorizeHttpRequests(auth -> auth
 
-                // Allow preflight requests
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Public endpoints
-                .requestMatchers(
-                        "/api/auth/register/**",
-                        "/api/auth/login/**",
-                        "/api/auth/forgot-password/**"
-                ).permitAll()
+    // Public
+    .requestMatchers(
+            "/api/auth/register/**",
+            "/api/auth/login/**",
+            "/api/auth/forgot-password/**"
+    ).permitAll()
 
-                // Role-based endpoints
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/doctor/**").hasRole("DOCTOR")
-                .requestMatchers("/api/patient/**").hasRole("PATIENT")
+    // 👇 Allow patient to book + view their appointments
+    .requestMatchers(
+            "/api/doctor/appointments/book",
+            "/api/doctor/appointments/patient",
+            "/api/doctor/appointments/available"
+    ).hasRole("PATIENT")
 
-                // Everything else must be authenticated
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+    // Admin
+    .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-        return http.build();
-    }
+    // Doctor endpoints (after patient special cases)
+    .requestMatchers("/api/doctor/**").hasRole("DOCTOR")
+
+    .anyRequest().authenticated()
+)
+        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+    return http.build();
+}
 }

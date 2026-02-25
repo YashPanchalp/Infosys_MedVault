@@ -6,8 +6,9 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.example.demo.dto.AppointmentStatus;
 import com.example.demo.entity.Appointment;
-import com.example.demo.entity.AppointmentStatus;
+
 import com.example.demo.entity.User;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
@@ -20,8 +21,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByPatient(User patient);
 
+
 List<Appointment> findByDoctor(User doctor);
 
+List<Appointment> findByDoctorId(Long doctorId);
 List<Appointment> findByPatientAndStatus(User patient, AppointmentStatus status);
 
 List<Appointment> findByDoctorAndStatus(User doctor, AppointmentStatus status);
@@ -33,6 +36,14 @@ List<Appointment> findByDoctorEmailAndAppointmentDateAndStatus(
     );
 
     List<Appointment> findByDoctorAndAppointmentDate(User doctor, LocalDate date);
+
+    boolean existsByDoctorAndAppointmentDateAndAppointmentTimeAndIdNot(
+        User doctor,
+        LocalDate date,
+        LocalTime time,
+        Long id
+);
+
 }
 
 

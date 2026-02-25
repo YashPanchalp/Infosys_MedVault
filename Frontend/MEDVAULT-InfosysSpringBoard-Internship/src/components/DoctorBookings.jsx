@@ -49,10 +49,10 @@ const DoctorBookings = () => {
         console.warn("No auth token found");
         return;
       }
-      const response = await axios.get("/api/appointments/doctor", {
+      const response = await axios.get("/api/doctor/appointments", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+      console.log("Appointments:", response.data);
       setAppointments(response.data);
     } catch (error) {
       console.error("Error fetching appointments", error);
@@ -67,7 +67,7 @@ const DoctorBookings = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("tab");
-    if (tab === "pending" || tab === "approved" || tab === "all") {
+   if (tab === "pending" || tab === "approved" || tab === "completed" || tab === "all") {
       setActiveTab(tab);
     }
   }, [location.search]);
@@ -86,6 +86,23 @@ const DoctorBookings = () => {
     () => appointments.filter((item) => item.status === "REJECTED"),
     [appointments]
   );
+
+  const handleComplete = async (id) => {
+  try {
+    const token = getToken();
+    if (!token) throw new Error("No auth token");
+
+    await axios.put(
+      `/api/doctor/appointments/${id}/status`,
+      { status: "COMPLETED" },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    await fetchAppointments();
+  } catch (error) {
+    console.error("Complete failed", error);
+  }
+};
 
   const analytics = useMemo(() => {
     const upcoming = approvedAppointments
@@ -119,7 +136,7 @@ const DoctorBookings = () => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
       await axios.put(
-        `/api/appointments/${id}/status`,
+        `/api/doctor/appointments/${id}/status`,
         { status: "APPROVED" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -142,7 +159,7 @@ const DoctorBookings = () => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
       await axios.put(
-        `/api/appointments/${id}/status`,
+        `/api/doctor/appointments/${id}/status`,
         { status: "REJECTED", reason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -161,6 +178,11 @@ const DoctorBookings = () => {
     }
     handleReject(id);
   };
+
+  const completedAppointments = useMemo(
+  () => appointments.filter((item) => item.status === "COMPLETED"),
+  [appointments]
+);
 
   return (
     <div className="doctor-bookings-page">
@@ -186,10 +208,11 @@ const DoctorBookings = () => {
       </header>
 
       <div className="booking-tabs">
-        <button onClick={() => handleTabChange("pending")}>Pending</button>
-        <button onClick={() => handleTabChange("approved")}>Approved</button>
-        <button onClick={() => handleTabChange("all")}>All</button>
-      </div>
+  <button onClick={() => handleTabChange("pending")}>Pending</button>
+  <button onClick={() => handleTabChange("approved")}>Approved</button>
+  <button onClick={() => handleTabChange("completed")}>Completed</button>
+  <button onClick={() => handleTabChange("all")}>All</button>
+</div>
 
       <section className="analytics-strip">
         <div>Approved: {analytics.approvedCount}</div>
@@ -238,11 +261,34 @@ const DoctorBookings = () => {
         ))}
 
       {activeTab === "approved" &&
-        approvedAppointments.map((item) => (
-          <div key={item.id}>
-            {item.patientName} - {item.appointmentTime}
-          </div>
-        ))}
+  approvedAppointments.map((item) => (
+    <div key={item.id} className="appointment-card">
+      <h3>{item.patientName}</h3>
+      <p>
+        {formatDateLabel(item.appointmentDate)} -{" "}
+        {formatTimeLabel(item.appointmentTime)}
+      </p>
+
+      <button
+        className="complete-btn"
+        onClick={() => handleComplete(item.id)}
+      >
+        Mark as Completed
+      </button>
+    </div>
+  ))}
+
+  {activeTab === "completed" &&
+  completedAppointments.map((item) => (
+    <div key={item.id} className="appointment-card completed-card">
+      <h3>{item.patientName}</h3>
+      <p>
+        {formatDateLabel(item.appointmentDate)} -{" "}
+        {formatTimeLabel(item.appointmentTime)}
+      </p>
+      <span className="status-badge completed">Completed</span>
+    </div>
+  ))}
 
       {activeTab === "all" &&
         appointments.map((item) => (
