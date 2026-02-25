@@ -1,26 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './PatientRatingsReviews.css';
 
 const REVIEWS_KEY = 'patientDoctorRatings';
-
-const DUMMY_VISITS = [
-  {
-    id: 'demo-visit-1',
-    doctorName: 'Dr. Asha Mehta',
-    hospitalName: 'CityCare Hospital',
-    appointmentDate: '2026-02-05',
-    appointmentTime: '10:30'
-  },
-  {
-    id: 'demo-visit-2',
-    doctorName: 'Dr. Rohan Kulkarni',
-    hospitalName: 'Green Valley Clinic',
-    appointmentDate: '2026-01-28',
-    appointmentTime: '16:00'
-  }
-];
 
 const parseStorage = () => {
   try {
@@ -74,6 +57,9 @@ const StarRating = ({ value, onChange, disabled = false }) => {
 
 const PatientRatingsReviews = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const appointmentIdParam = new URLSearchParams(location.search).get('appointmentId');
+
   const [loading, setLoading] = useState(true);
   const [visits, setVisits] = useState([]);
   const [savedReviews, setSavedReviews] = useState({});
@@ -89,7 +75,8 @@ const PatientRatingsReviews = () => {
       let apiAppointments = [];
       if (token) {
         try {
-          const response = await axios.get('/api/appointments/patient', {
+          // fetch the patient's appointments and filter for completed visits
+          const response = await axios.get('/api/patient/appointments', {
             headers: { Authorization: `Bearer ${token}` }
           });
           apiAppointments = Array.isArray(response.data) ? response.data : [];
@@ -113,12 +100,13 @@ const PatientRatingsReviews = () => {
             status: (item.status || '').toUpperCase()
           };
         })
-        .filter((item) => item.visitDateTime && item.visitDateTime <= now)
+        // include visits that are explicitly marked COMPLETED by backend,
+        // or that have already occurred according to local time
+        .filter((item) => (item.status === 'COMPLETED' || (item.visitDateTime && item.visitDateTime <= now)))
         .filter((item) => item.status !== 'REJECTED');
 
-      const merged = [...DUMMY_VISITS, ...completedApiVisits];
-      const uniqueVisits = Object.values(
-        merged.reduce((accumulator, item, index) => {
+      let uniqueVisits = Object.values(
+        completedApiVisits.reduce((accumulator, item, index) => {
           const id = getVisitId(item, index);
           accumulator[id] = {
             ...item,
@@ -132,6 +120,10 @@ const PatientRatingsReviews = () => {
         const timeB = b.visitDateTime ? b.visitDateTime.getTime() : 0;
         return timeB - timeA;
       });
+      // If an appointmentId is provided in the URL, show only that visit (if present)
+      if (appointmentIdParam) {
+        uniqueVisits = uniqueVisits.filter((v) => String(v.id) === String(appointmentIdParam));
+      }
 
       const initialDrafts = {};
       uniqueVisits.forEach((visit) => {
@@ -148,7 +140,7 @@ const PatientRatingsReviews = () => {
     };
 
     loadVisits();
-  }, []);
+  }, [appointmentIdParam]);
 
   const reviewedCount = useMemo(
     () => Object.keys(savedReviews).length,
@@ -237,28 +229,40 @@ const PatientRatingsReviews = () => {
                   {submitted ? <span className="submitted-pill">Submitted</span> : null}
                 </div>
 
-                <StarRating
-                  value={Number(draft.rating || 0)}
-                  onChange={(rating) => updateDraft(visit.id, { rating })}
-                />
+                {submitted ? (
+                  <>
+                    <StarRating value={Number(submitted.rating || 0)} onChange={() => {}} disabled={true} />
+                    <p className="submitted-review">{submitted.review || 'No review text provided.'}</p>
+                    <div className="review-actions">
+                      <span className="submitted-pill">Submitted</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <StarRating
+                      value={Number(draft.rating || 0)}
+                      onChange={(rating) => updateDraft(visit.id, { rating })}
+                    />
 
-                <textarea
-                  rows="3"
-                  value={draft.review}
-                  onChange={(event) => updateDraft(visit.id, { review: event.target.value })}
-                  placeholder="Write your review for this doctor and hospital"
-                />
+                    <textarea
+                      rows="3"
+                      value={draft.review}
+                      onChange={(event) => updateDraft(visit.id, { review: event.target.value })}
+                      placeholder="Write your review for this doctor and hospital"
+                    />
 
-                <div className="review-actions">
-                  <button
-                    className="primary-btn"
-                    type="button"
-                    disabled={!draft.rating}
-                    onClick={() => handleSaveReview(visit)}
-                  >
-                    {submitted ? 'Update Review' : 'Submit Review'}
-                  </button>
-                </div>
+                    <div className="review-actions">
+                      <button
+                        className="primary-btn"
+                        type="button"
+                        disabled={!draft.rating}
+                        onClick={() => handleSaveReview(visit)}
+                      >
+                        Submit Review
+                      </button>
+                    </div>
+                  </>
+                )}
               </article>
             );
           })

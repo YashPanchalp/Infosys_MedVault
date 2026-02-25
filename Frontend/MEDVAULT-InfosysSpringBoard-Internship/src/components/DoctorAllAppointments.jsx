@@ -27,7 +27,7 @@ const DoctorAllAppointments = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const response = await axios.get('/api/appointments/doctor', {
+        const response = await axios.get('/api/doctor/appointments/doctor', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAppointments(response.data || []);

@@ -49,10 +49,10 @@ const DoctorBookings = () => {
         console.warn("No auth token found");
         return;
       }
-      const response = await axios.get("/api/appointments/doctor", {
+      const response = await axios.get("/api/doctor/appointments", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
+      console.log("Appointments:", response.data);
       setAppointments(response.data);
     } catch (error) {
       console.error("Error fetching appointments", error);
@@ -67,7 +67,7 @@ const DoctorBookings = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("tab");
-    if (tab === "pending" || tab === "approved" || tab === "all") {
+   if (tab === "pending" || tab === "approved" || tab === "completed" || tab === "all") {
       setActiveTab(tab);
     }
   }, [location.search]);
@@ -86,6 +86,23 @@ const DoctorBookings = () => {
     () => appointments.filter((item) => item.status === "REJECTED"),
     [appointments]
   );
+
+  const handleComplete = async (id) => {
+  try {
+    const token = getToken();
+    if (!token) throw new Error("No auth token");
+
+    await axios.put(
+      `/api/doctor/appointments/${id}/status`,
+      { status: "COMPLETED" },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    await fetchAppointments();
+  } catch (error) {
+    console.error("Complete failed", error);
+  }
+};
 
   const analytics = useMemo(() => {
     const upcoming = approvedAppointments
@@ -119,7 +136,7 @@ const DoctorBookings = () => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
       await axios.put(
-        `/api/appointments/${id}/status`,
+        `/api/doctor/appointments/${id}/status`,
         { status: "APPROVED" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -142,7 +159,7 @@ const DoctorBookings = () => {
       const token = getToken();
       if (!token) throw new Error("No auth token");
       await axios.put(
-        `/api/appointments/${id}/status`,
+        `/api/doctor/appointments/${id}/status`,
         { status: "REJECTED", reason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -161,6 +178,11 @@ const DoctorBookings = () => {
     }
     handleReject(id);
   };
+
+  const completedAppointments = useMemo(
+  () => appointments.filter((item) => item.status === "COMPLETED"),
+  [appointments]
+);
 
   return (
     <div className="doctor-bookings-page">
@@ -186,28 +208,11 @@ const DoctorBookings = () => {
       </header>
 
       <div className="booking-tabs">
-        <button
-          className={`tab-btn ${activeTab === "pending" ? "active" : ""}`}
-          onClick={() => handleTabChange("pending")}
-        >
-          <span className="tab-label">Pending</span>
-          <span className="tab-count">{pendingAppointments.length}</span>
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "approved" ? "active" : ""}`}
-          onClick={() => handleTabChange("approved")}
-        >
-          <span className="tab-label">Approved</span>
-          <span className="tab-count">{approvedAppointments.length}</span>
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "all" ? "active" : ""}`}
-          onClick={() => handleTabChange("all")}
-        >
-          <span className="tab-label">All</span>
-          <span className="tab-count">{appointments.length}</span>
-        </button>
-      </div>
+  <button onClick={() => handleTabChange("pending")}>Pending</button>
+  <button onClick={() => handleTabChange("approved")}>Approved</button>
+  <button onClick={() => handleTabChange("completed")}>Completed</button>
+  <button onClick={() => handleTabChange("all")}>All</button>
+</div>
 
       <section className="analytics-strip">
         <article className="analytics-card">
@@ -302,33 +307,35 @@ const DoctorBookings = () => {
         </section>
       )}
 
-      {activeTab === "approved" && (
-        <section className="bookings-section">
-          <h2>Approved Appointments</h2>
-          {approvedAppointments.length === 0 ? (
-            <div className="empty-state">
-              <h3>No approved appointments</h3>
-              <p className="muted">Approved visits will show here.</p>
-            </div>
-          ) : (
-            <div className="appointments-list">
-              {approvedAppointments.map((item) => (
-                <article key={item.id} className="appointment-row">
-                  <div className="appointment-main">
-                    <h3>{item.patientName}</h3>
-                    <p>{item.reason || "No reason added"}</p>
-                  </div>
-                  <div className="appointment-meta">
-                    <span>{formatDateLabel(item.appointmentDate)}</span>
-                    <span>{formatTimeLabel(item.appointmentTime)}</span>
-                  </div>
-                  <span className="status-pill">Approved</span>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+      {activeTab === "approved" &&
+  approvedAppointments.map((item) => (
+    <div key={item.id} className="appointment-card">
+      <h3>{item.patientName}</h3>
+      <p>
+        {formatDateLabel(item.appointmentDate)} -{" "}
+        {formatTimeLabel(item.appointmentTime)}
+      </p>
+
+      <button
+        className="complete-btn"
+        onClick={() => handleComplete(item.id)}
+      >
+        Mark as Completed
+      </button>
+    </div>
+  ))}
+
+  {activeTab === "completed" &&
+  completedAppointments.map((item) => (
+    <div key={item.id} className="appointment-card completed-card">
+      <h3>{item.patientName}</h3>
+      <p>
+        {formatDateLabel(item.appointmentDate)} -{" "}
+        {formatTimeLabel(item.appointmentTime)}
+      </p>
+      <span className="status-badge completed">Completed</span>
+    </div>
+  ))}
 
       {activeTab === "all" && (
         <section className="bookings-section">
