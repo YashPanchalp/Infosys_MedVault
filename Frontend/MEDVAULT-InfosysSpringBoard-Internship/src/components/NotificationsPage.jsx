@@ -1,7 +1,44 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NotificationsPage.css';
+import axios from 'axios';
 
+
+
+// Local storage helpers (inline so this component can operate without utils)
+function readNotificationsLocal() {
+  try {
+    const raw = localStorage.getItem('notifications');
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch  {
+    return [];
+  }
+}
+
+
+
+const formatHeading = (text = '') => {
+  return text
+    .toLowerCase()                 // convert full caps to lowercase
+    .replace(/_/g, ' ')            // remove underscores
+    .replace(/\b\w/g, char => char.toUpperCase()); // Capitalize First Letter
+};
+
+function writeNotificationsLocal(list) {
+  try {
+    localStorage.setItem('notifications', JSON.stringify(list));
+    localStorage.setItem('unreadNotificationCount', String(list.filter(n => !(n.read === true)).length));
+  } catch  {
+    // ignore
+  }
+}
+
+function markAllLocalRead() {
+  const list = readNotificationsLocal().map(n => ({ ...n, read: true, unread: false }));
+  writeNotificationsLocal(list);
+  return list;
+}
 const NotificationsPage = () => {
   const navigate = useNavigate();
 
@@ -21,62 +58,116 @@ const NotificationsPage = () => {
     return 'Patient';
   }, [role]);
 
-  const notifications = useMemo(() => {
-    const now = new Date().toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
+  const [notifications, setNotifications] = useState(() => readNotificationsLocal());
 
-    return [
-      {
-        id: 1,
-        type: 'Upcoming Appointment',
-        status: 'upcoming',
-        unread: true,
-        title: 'Upcoming appointment reminder',
-        message: 'You have an appointment scheduled tomorrow. Please join 10 minutes early.',
-        time: now
-      },
-      {
-        id: 2,
-        type: 'Reschedule Update',
-        status: 'rescheduled',
-        unread: true,
-        title: 'Appointment was rescheduled',
-        message: 'One of your appointments has been rescheduled. Please review the new time slot.',
-        time: now
-      },
-      {
-        id: 3,
-        type: 'Cancellation Update',
-        status: 'canceled',
-        unread: true,
-        title: 'Appointment cancellation update',
-        message: 'An appointment was canceled. You can book a new slot from the bookings page.',
-        time: now
-      },
-      {
-        id: 4,
-        type: 'General Update',
-        status: 'info',
-        unread: false,
-        title: `${roleLabel} account update`,
-        message: 'Your profile and preferences were synced successfully. No action is required.',
-        time: now
+  useEffect(() => {
+  const markAll = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await axios.post('/api/notifications/mark-all-read', null, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  markAll();
+}, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+
+    const fetchServer = async () => {
+      if (!token) {
+        setNotifications(readNotificationsLocal());
+        return;
       }
-    ];
-  }, [roleLabel]);
 
-  const unreadCount = notifications.filter((item) => item.unread).length;
-  const criticalCount = notifications.filter((item) => item.status === 'canceled').length;
-  const scheduleCount = notifications.filter((item) => item.status === 'upcoming' || item.status === 'rescheduled').length;
+      try {
+        const resp = await axios.get('/api/notifications', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setNotifications(resp.data || []);
+      } catch  {
+        setNotifications(readNotificationsLocal());
+      }
+    };
+
+    fetchServer();
+  }, []);
+
+  const isUnread = (item) => item.readStatus === false;
+  // Ensure we always operate on an array (server may return unexpected shape)
+  const notificationsList = Array.isArray(notifications) ? notifications : (notifications?.notifications || []);
+  const unreadCount = notificationsList.filter((item) => isUnread(item)).length;
+
+  const mapStatus = (item) => {
+    const t = (item.type || '').toString().toUpperCase();
+    if (t.includes('CANCEL')) return 'canceled';
+    if (t.includes('RESCHEDULE')) return 'rescheduled';
+    if (t.includes('REQUEST') || t.includes('CREAT') || t.includes('APPROVE')) return 'upcoming';
+    return item.status || 'info';
+  };
+
+  const criticalCount = notificationsList.filter((item) => mapStatus(item) === 'canceled').length;
+  const scheduleCount = notificationsList.filter((item) => ['upcoming', 'rescheduled'].includes(mapStatus(item))).length;
 
   useEffect(() => {
     localStorage.setItem('unreadNotificationCount', String(unreadCount));
   }, [unreadCount]);
+
+  const handleMarkAllRead = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      const list = markAllLocalRead();
+      setNotifications(list);
+      return;
+    }
+
+    // mark all unread via backend
+    (async () => {
+      const unread = notifications.filter(n => n.readStatus === false && n.id);
+      for (const n of unread) {
+        try {
+          await axios.post(`/api/notifications/mark-read/${n.id}`, null, { headers: { Authorization: `Bearer ${token}` } });
+        } catch  {
+          // ignore per-item failure
+        }
+      }
+      // refresh
+      try {
+        const resp = await axios.get('/api/notifications', { headers: { Authorization: `Bearer ${token}` } });
+        setNotifications(resp.data || []);
+      } catch  {
+        setNotifications(markAllLocalRead());
+      }
+    })();
+  };
+
+  const handleMarkRead = async (id) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // fallback to local
+      const list = notifications.map(n => n.id === id ? { ...n, read: true, unread: false } : n);
+      writeNotificationsLocal(list);
+      setNotifications(list);
+      return;
+    }
+
+    try {
+      await axios.post(`/api/notifications/mark-read/${id}`, null, { headers: { Authorization: `Bearer ${token}` } });
+      const resp = await axios.get('/api/notifications', { headers: { Authorization: `Bearer ${token}` } });
+      setNotifications(resp.data || []);
+    } catch  {
+      // fallback local update
+      const list = notifications.map(n => n.id === id ? { ...n, read: true, unread: false } : n);
+      setNotifications(list);
+      writeNotificationsLocal(list);
+    }
+  };
 
   return (
     <div className="notifications-page">
@@ -105,20 +196,30 @@ const NotificationsPage = () => {
         </article>
       </section>
 
+      
+
       <main className="notifications-main">
-        {notifications.map((item) => (
-          <article key={item.id} className={`notification-card ${item.status}`}>
-            <div className="notification-top-row">
-              <span className="notification-type">
-                <span className="notification-dot" aria-hidden="true" />
-                {item.type}
-              </span>
-              <span className="notification-time">{item.time}</span>
-            </div>
-            <h2>{item.title}</h2>
-            <p>{item.message}</p>
-          </article>
-        ))}
+        {notificationsList.map((item) => {
+          const statusClass = mapStatus(item);
+          const unread = isUnread(item);
+          const timeLabel = item.createdAt ? new Date(item.createdAt).toLocaleString() : (item.time || '');
+
+          return (
+            <article key={item.id} className={`notification-card ${statusClass} ${unread ? 'unread' : 'read'}`}>
+              <div className="notification-top-row">
+                <span className="notification-type">
+                  <span className={`notification-dot ${unread ? 'unread' : ''}`} aria-hidden="true" />
+                  {formatHeading(item.type || item.title)}
+                </span>
+                <span className="notification-time">{timeLabel}</span>
+              </div>
+              <h2>
+  {formatHeading(item.type)}
+</h2>
+              <p>{item.message}</p>
+            </article>
+          );
+        })}
       </main>
     </div>
   );

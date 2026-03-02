@@ -1,5 +1,7 @@
 package com.example.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -13,7 +15,8 @@ public class User {
     @Column(nullable = false)
 private Boolean enabled = true;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+@OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+@JsonIgnoreProperties("user")
     private PatientProfile patientProfile;
 
     private String name;

@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.example.demo.dto.AppointmentRequest;
 import com.example.demo.dto.AppointmentResponse;
@@ -18,14 +20,19 @@ import com.example.demo.repository.UserRepository;
 @Service
 public class AppointmentService {
 
-    private final AppointmentRepository appointmentRepository;
-    private final UserRepository userRepository;
+        private static final Logger logger = LoggerFactory.getLogger(AppointmentService.class);
 
-    public AppointmentService(AppointmentRepository appointmentRepository,
-                              UserRepository userRepository) {
-        this.appointmentRepository = appointmentRepository;
-        this.userRepository = userRepository;
-    }
+        private final AppointmentRepository appointmentRepository;
+        private final UserRepository userRepository;
+        private final NotificationService notificationService;
+
+        public AppointmentService(AppointmentRepository appointmentRepository,
+                                                          UserRepository userRepository,
+                                                          NotificationService notificationService) {
+                this.appointmentRepository = appointmentRepository;
+                this.userRepository = userRepository;
+                this.notificationService = notificationService;
+        }
 
     private AppointmentResponse mapToResponse(Appointment appointment) {
     return new AppointmentResponse(appointment);
@@ -69,6 +76,34 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.PENDING);
 
         appointmentRepository.save(appointment);
+
+        // Create notifications for doctor and patient
+        try {
+            String doctorMsg = "New appointment request from " + patient.getName()
+                    + " on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime();
+
+            notificationService.createNotification(
+                    doctor,
+                    patient,
+                    "APPOINTMENT_REQUEST",
+                    doctorMsg,
+                    appointment
+            );
+
+            String patientMsg = "Your appointment request with Dr. " + doctor.getName()
+                    + " is created and pending approval.";
+
+            notificationService.createNotification(
+                    patient,
+                    doctor,
+                    "APPOINTMENT_CREATED",
+                    patientMsg,
+                    appointment
+            );
+                } catch (Exception e) {
+                        // notification failure should not break booking flow; log full stack for debugging
+                        logger.error("Failed to create notifications", e);
+                }
     }
 
 
@@ -179,6 +214,40 @@ public void rescheduleAppointment(RescheduleRequest request,
     appointment.setStatus(AppointmentStatus.APPROVED);
 
     appointmentRepository.save(appointment);
+        // Notify patient about reschedule
+        try {
+                User patient = appointment.getPatient();
+                User doctor = appointment.getDoctor();
+                String pmsg = "Your appointment with Dr. " + doctor.getName()
+                                + " has been rescheduled to " + appointment.getAppointmentDate()
+                                + " at " + appointment.getAppointmentTime();
+
+                notificationService.createNotification(
+                                patient,
+                                doctor,
+                                "APPOINTMENT_RESCHEDULED",
+                                pmsg,
+                                appointment
+                );
+                // Notify doctor about the reschedule as well
+                try {
+                    String dmsg = "You rescheduled the appointment with " + patient.getName()
+                                    + " to " + appointment.getAppointmentDate()
+                                    + " at " + appointment.getAppointmentTime();
+
+                    notificationService.createNotification(
+                                    doctor,
+                                    doctor,
+                                    "APPOINTMENT_RESCHEDULED",
+                                    dmsg,
+                                    appointment
+                    );
+                } catch (Exception ex) {
+                    logger.error("Failed to create reschedule notification for doctor", ex);
+                }
+        } catch (Exception e) {
+                logger.error("Failed to create reschedule notification", e);
+        }
 }
 
 public void updateAppointmentStatus(Long appointmentId,
@@ -194,6 +263,44 @@ public void updateAppointmentStatus(Long appointmentId,
 
     appointment.setStatus(AppointmentStatus.valueOf(status));
     appointmentRepository.save(appointment);
+        // Notify patient about status change (approved/cancelled/rejected)
+        try {
+                User patient = appointment.getPatient();
+                User doctor = appointment.getDoctor();
+                String statusUpper = appointment.getStatus().name();
+                String msg = null;
+
+                if (statusUpper.equals("CANCELLED")) {
+                        msg = "Your appointment on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime() + " was cancelled by Dr. " + doctor.getName();
+                        notificationService.createNotification(patient, doctor, "APPOINTMENT_CANCELLED", msg, appointment);
+                } else if (statusUpper.equals("APPROVED")) {
+                        msg = "Your appointment on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime() + " has been approved by Dr. " + doctor.getName();
+                        notificationService.createNotification(patient, doctor, "APPOINTMENT_APPROVED", msg, appointment);
+                } else if (statusUpper.equals("REJECTED")) {
+                        msg = "Your appointment request on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime() + " was rejected by Dr. " + doctor.getName();
+                        notificationService.createNotification(patient, doctor, "APPOINTMENT_REJECTED", msg, appointment);
+                }
+                                // Also notify the doctor about the action they performed
+                                try {
+                                        String dmsg = null;
+
+                                        if (statusUpper.equals("CANCELLED")) {
+                                                dmsg = "You cancelled the appointment on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime() + " for " + patient.getName();
+                                        } else if (statusUpper.equals("APPROVED")) {
+                                                dmsg = "You approved the appointment on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime() + " for " + patient.getName();
+                                        } else if (statusUpper.equals("REJECTED")) {
+                                                dmsg = "You rejected the appointment request on " + appointment.getAppointmentDate() + " at " + appointment.getAppointmentTime() + " for " + patient.getName();
+                                        }
+
+                                        if (dmsg != null) {
+                                                notificationService.createNotification(doctor, doctor, "APPOINTMENT_STATUS_CHANGED", dmsg, appointment);
+                                        }
+                                } catch (Exception ex) {
+                                        logger.error("Failed to create status-change notification for doctor", ex);
+                                }
+        } catch (Exception e) {
+                logger.error("Failed to create status-change notification", e);
+        }
 }
 
 

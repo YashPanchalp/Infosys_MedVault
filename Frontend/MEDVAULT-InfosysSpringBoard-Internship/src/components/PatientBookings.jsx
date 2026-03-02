@@ -176,6 +176,7 @@ const PatientBookings = () => {
       );
 
       setSuccessMessage('Appointment booked successfully (Pending approval).');
+      // Notifications are created server-side by the booking endpoint.
       setSelectedTime('');
       setConcern('');
       setSelectedDate('');

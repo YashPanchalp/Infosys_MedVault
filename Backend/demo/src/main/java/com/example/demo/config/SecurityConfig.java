@@ -32,15 +32,15 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
     .requestMatchers(
             "/api/auth/register/**",
             "/api/auth/login/**",
-            "/api/auth/forgot-password/**"
+            "/api/auth/forgot-password/**",
+            "/api/notifications/**"
     ).permitAll()
 
-    // 👇 Allow patient to book + view their appointments
-    .requestMatchers(
-            "/api/doctor/appointments/book",
-            "/api/doctor/appointments/patient",
-            "/api/doctor/appointments/available"
-    ).hasRole("PATIENT")
+        // 👇 Allow patients to access their appointment endpoints
+        .requestMatchers(
+            "/api/patient/appointments/**",
+            "/api/appointments/available"
+        ).hasRole("PATIENT")
 
     // Admin
     .requestMatchers("/api/admin/**").hasRole("ADMIN")

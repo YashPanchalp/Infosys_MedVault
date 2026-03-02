@@ -33,6 +33,31 @@ const DoctorDashboard = () => {
   const [userName, setUserName] = useState('');
   const [showStats, setShowStats] = useState(true);
   const [todayAppointments, setTodayAppointments] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  useEffect(() => {
+  const fetchUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const resp = await axios.get('/api/notifications/unread-count', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setUnreadNotificationCount(resp.data || 0);
+    } catch (err) {
+      console.error('Failed to fetch unread count', err);
+    }
+  };
+
+  fetchUnreadCount();
+
+  // Optional: refresh every 10 seconds
+  const interval = setInterval(fetchUnreadCount, 10000);
+
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -148,8 +173,6 @@ const DoctorDashboard = () => {
     }
   };
 
-  const pendingNotificationCount = todayAppointments.length;
-  const unreadNotificationCount = Number(localStorage.getItem('unreadNotificationCount') || 0) || pendingNotificationCount;
 
   const dashboardCards = [
     {
